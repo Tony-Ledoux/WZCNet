@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:18.4-alpine3.24
+    container_name: pg-container
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: supersecretpostgrespwd1
+      POSTGRES_DB: WZCNET
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    restart: always
+
+volumes:
+  pgdata:

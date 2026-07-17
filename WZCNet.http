@@ -1,0 +1,6 @@
+@WZCNet_HostAddress = http://localhost:5187
+
+GET {{WZCNet_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
