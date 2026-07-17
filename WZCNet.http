@@ -4,13 +4,18 @@ GET {{WZCNet_HostAddress}}/api/employee/
 Accept: application/json
 
 ###
+GET {{WZCNet_HostAddress}}/api/employee/1
+Accept: application/json
+###
 POST {{WZCNet_HostAddress}}/api/employee/
 Accept: application/json
 Content-Type: application/json
 
 {
-    "firstName":"           d     ",
+    "firstName":"      x         ",
     "lastName":"Alleman            ",
-    "dateOfBirth": "2025-02-28"
+    "dateOfBirth": "2025-02-28",
+    "addresses":[{}]
+    
 }
 ###

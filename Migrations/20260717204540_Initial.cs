@@ -41,7 +41,7 @@ namespace WZCNet.Migrations
                     HouseNumber = table.Column<string>(type: "text", nullable: false),
                     ZipCode = table.Column<string>(type: "text", nullable: false),
                     Municipality = table.Column<string>(type: "text", nullable: false),
-                    IsCurrent = table.Column<bool>(type: "boolean", nullable: false),
+                    Until = table.Column<DateOnly>(type: "date", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)

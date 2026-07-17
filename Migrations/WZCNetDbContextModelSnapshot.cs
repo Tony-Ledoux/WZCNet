@@ -80,9 +80,6 @@ namespace WZCNet.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("IsCurrent")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Municipality")
                         .IsRequired()
                         .HasColumnType("text");
@@ -90,6 +87,9 @@ namespace WZCNet.Migrations
                     b.Property<string>("StreetName")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateOnly?>("Until")
+                        .HasColumnType("date");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

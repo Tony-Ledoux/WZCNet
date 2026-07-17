@@ -36,7 +36,7 @@ app.UseExceptionHandler(errorApp =>
         (int statusCode, string message) = exception switch
         {
             ConflictExeption ex => (409, ex.Message),
-            //NotFoundException ex => (404, ex.Message),
+            NotFoundException ex => (404, ex.Message),
             _ => (500, "An unexpected error occurred.")
         };
 

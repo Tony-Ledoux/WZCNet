@@ -21,7 +21,7 @@ public class EmployeeService(WZCNetDbContext context): IEmployeeService
         );
         if (exists)
         {
-            throw new ConflictExeption($"Een werknemer met genaamd {input.FirstName} {input.LastName} geboren op {input.DateOfBirth} bestaat al");
+            throw new ConflictExeption($"Een werknemer genaamd {input.FirstName}, {input.LastName} geboren op {input.DateOfBirth:dd-MM-yyyy} bestaat al");
         }
         var employee = new Employee
         {
@@ -39,6 +39,24 @@ public class EmployeeService(WZCNetDbContext context): IEmployeeService
             DateOfBirth=employee.DateOfBirth
         };
 
+    }
+
+    public async Task<EmployeeWithAddressDto?> GetEmployeeDetailsFromIdAsync(int id)
+    {
+        var employee = await _db.Employees.Include(e=>e.EmployeeAddresses).FirstOrDefaultAsync();
+        if(employee==null) throw new NotFoundException($"medewerker met id {id} niet gevonden");
+        return new EmployeeWithAddressDto
+        {
+            Id = employee.Id,
+            FirstName=employee.FirstName,
+            LastName = employee.LastName,
+            DateOfBirth=employee.DateOfBirth,
+            Addresses = [.. employee.EmployeeAddresses.Select(ea=> new EmployeeAddressDto{ 
+                Id=ea.Id,
+                StreetName=ea.StreetName
+                })]
+
+        };
     }
 
     public async Task<IEnumerable<EmployeeBaseDto>> GetEmployeesAsync()

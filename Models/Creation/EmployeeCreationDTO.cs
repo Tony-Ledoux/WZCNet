@@ -1,5 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using WZCNet.Converters;
 using WZCNet.Validation;
 
 namespace WZCNet.Models.Creation;
@@ -27,6 +29,11 @@ public class EmployeeCreationDTO
 
     [Required]
     [DateRange(MaxYearsAgo = 120)]
-    public DateOnly DateOfBirth { get; set; } // must be younger than 120 years cannot be in the future
+    public DateOnly DateOfBirth { get; set; }
+
+    [JsonConverter(typeof(ArrayConverterFactory))]
+    [ValidateArrayItems(typeof(EmployeeAddressCreationBase))]
+    public EmployeeAddressCreationBase[]? Addresses {get;set;}
+
 
 }

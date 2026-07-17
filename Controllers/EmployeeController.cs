@@ -20,11 +20,19 @@ namespace WZCNet.Controllers
             return Ok(Employees);
         }
 
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetEmployeeDetails(int id)
+        {
+            var Employee = await _srv.GetEmployeeDetailsFromIdAsync(id);
+            return Ok(Employee);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateNewEmployee(EmployeeCreationDTO input)
         {
-           var employee = await _srv.CreateEmployeeAsync(input);
-           return Created("",employee);
+           //var employee = await _srv.CreateEmployeeAsync(input);
+           //return Created("",employee);
+           return Ok(input);
         }
 
     }
