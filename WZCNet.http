@@ -1,6 +1,16 @@
 @WZCNet_HostAddress = http://localhost:5187
 
-GET {{WZCNet_HostAddress}}/weatherforecast/
+GET {{WZCNet_HostAddress}}/api/employee/
 Accept: application/json
 
+###
+POST {{WZCNet_HostAddress}}/api/employee/
+Accept: application/json
+Content-Type: application/json
+
+{
+    "firstName":"           d     ",
+    "lastName":"Alleman            ",
+    "dateOfBirth": "2025-02-28"
+}
 ###
