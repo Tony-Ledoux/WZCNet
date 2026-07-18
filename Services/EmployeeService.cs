@@ -30,6 +30,21 @@ public class EmployeeService(WZCNetDbContext context): IEmployeeService
             DateOfBirth=input.DateOfBirth
         };
         _db.Employees.Add(employee);
+        if(input.Addresses != null)
+        {
+            foreach (var address in input.Addresses)
+            {
+                var a = new EmployeeAddress()
+                {
+                  StreetName = address.StreetName,
+                  HouseNumber = address.HouseNumber,
+                  ZipCode = address.ZipCode,
+                  Municipality = address.Municipality,
+                  Until = address?.Until ?? null  
+                };
+                employee.EmployeeAddresses.Add(a);
+            }
+        }
         await _db.SaveChangesAsync();
         return new EmployeeBaseDto
         {
@@ -43,7 +58,7 @@ public class EmployeeService(WZCNetDbContext context): IEmployeeService
 
     public async Task<EmployeeWithAddressDto?> GetEmployeeDetailsFromIdAsync(int id)
     {
-        var employee = await _db.Employees.Include(e=>e.EmployeeAddresses).FirstOrDefaultAsync();
+        var employee = await _db.Employees.Include(e=>e.EmployeeAddresses).FirstOrDefaultAsync(e=> e.Id == id);
         if(employee==null) throw new NotFoundException($"medewerker met id {id} niet gevonden");
         return new EmployeeWithAddressDto
         {
@@ -53,7 +68,12 @@ public class EmployeeService(WZCNetDbContext context): IEmployeeService
             DateOfBirth=employee.DateOfBirth,
             Addresses = [.. employee.EmployeeAddresses.Select(ea=> new EmployeeAddressDto{ 
                 Id=ea.Id,
-                StreetName=ea.StreetName
+                EmployeeId = ea.EmployeeId,
+                StreetName=ea.StreetName,
+                HouseNumber = ea.HouseNumber,
+                ZipCode = ea.ZipCode,
+                Municipality = ea.Municipality,
+                Until = ea.Until
                 })]
 
         };

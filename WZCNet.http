@@ -4,7 +4,7 @@ GET {{WZCNet_HostAddress}}/api/employee/
 Accept: application/json
 
 ###
-GET {{WZCNet_HostAddress}}/api/employee/1
+GET {{WZCNet_HostAddress}}/api/employee/0
 Accept: application/json
 ###
 POST {{WZCNet_HostAddress}}/api/employee/
@@ -12,18 +12,24 @@ Accept: application/json
 Content-Type: application/json
 
 {
-    "firstName":"      x         ",
+    "firstName":"      Jan         ",
     "lastName":"Alleman            ",
-    "dateOfBirth": "2025-02-28",
-    "addresses":[
-        {
-        "zipCode":"2000",
+    "dateOfBirth": "1980-09-30",
+    "addresses":[{
+        "streetName":"Begijnenstraat",
         "houseNumber":"1",
-        "municipality":"      Antwerpen   ",
-        "streetName":"    Begijnenstraat   ",
-        "until":"2059-05-04"
-    }
-    ]
+        "zipCode":"2000",
+        "municipality": "Antwerpen",
+        "until":"2020-12-25"
+    },
+    {
+        "streetName":"Vlaamse Kaai",
+        "houseNumber":"30",
+        "zipCode":"1980",
+        "municipality": "Imaginary"
+    }]
+    
+    
     
 }
 ###

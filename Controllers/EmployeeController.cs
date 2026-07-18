@@ -30,9 +30,9 @@ namespace WZCNet.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateNewEmployee(EmployeeCreationDTO input)
         {
-           //var employee = await _srv.CreateEmployeeAsync(input);
-           //return Created("",employee);
-           return Ok(input);
+           var employee = await _srv.CreateEmployeeAsync(input);
+           return Created("",employee);
+           //return Ok(input);
         }
 
     }

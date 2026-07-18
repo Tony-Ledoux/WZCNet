@@ -9,6 +9,12 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options):DbContex
 {
     public DbSet<Employee> Employees {get;set;}
     public DbSet<EmployeeAddress> EmployeeAddresses {get;set;}
+    public DbSet<ContactType> ContactTypes {get;set;}
+    public DbSet<EmployeeContact> EmployeeContacts {get;set;}
+    public DbSet<EmploymentHistory> EmploymentHistories {get;set;}
+    public DbSet<EmployeeComment> EmployeeComments {get;set;}
+    public DbSet<Permission> Permissions{get;set;}
+    public DbSet<EmployeePermission> EmployeePermissions {get;set;}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,9 +31,31 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options):DbContex
         }
 
 
-        // Employee --> EmployeeAddress
+        // Employee 
         modelBuilder.Entity<Employee>().HasMany(e=>e.EmployeeAddresses).WithOne(ea=>ea.Employee).HasForeignKey(ea=>ea.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<Employee>().HasMany(e=>e.EmployeeContacts).WithOne(ct=>ct.Employee).HasForeignKey(ct=>ct.EmployeeId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<Employee>().HasIndex(e=>new {e.FirstName, e.LastName,e.DateOfBirth}).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+
+        // contactTypes
+        modelBuilder.Entity<ContactType>().HasIndex(ct=>ct.TypeOfContact).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+        modelBuilder.Entity<EmployeeContact>().HasOne(ec=>ec.ContactType).WithMany().HasForeignKey(ec=>ec.ContactTypeId).OnDelete(DeleteBehavior.Restrict);
+        
+        //EmploymentHistorie
+        modelBuilder.Entity<EmploymentHistory>().HasOne(eh=>eh.Employee).WithMany(e=>e.EmploymentHistories).HasForeignKey(eh=>eh.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+
+        //EmployeeComment
+        modelBuilder.Entity<EmployeeComment>().HasOne(ec=>ec.Author).WithMany(e=>e.CommentsAuthored).HasForeignKey(ec=>ec.CreatedByEmployeeId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<EmployeeComment>().HasOne(ec=>ec.Recipient).WithMany(e=>e.CommentsRecieved).HasForeignKey(ec=>ec.CreatedForEmployeeId).OnDelete(DeleteBehavior.Restrict);
+
+        //Permission
+        modelBuilder.Entity<Permission>().HasIndex(p=>p.PermissionString).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+
+        //EmployeePermission
+        modelBuilder.Entity<EmployeePermission>().HasOne(ep=>ep.Employee).WithMany(e=>e.PersonalPermissions).HasForeignKey(ep=>ep.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<EmployeePermission>().HasOne(ep=>ep.Permission).WithMany().HasForeignKey(ep=>ep.PermissionId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<EmployeePermission>().HasIndex(ep=>new {ep.EmployeeId, ep.PermissionId});
+       
+
 
     }
 

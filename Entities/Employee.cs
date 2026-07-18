@@ -10,4 +10,11 @@ public class Employee: BaseEntity
 
     // navigation Property
     public ICollection<EmployeeAddress> EmployeeAddresses {get;set;} = [];
+    public ICollection<EmployeeContact> EmployeeContacts {get;set;}=[];
+    public ICollection<EmploymentHistory> EmploymentHistories {get;set;}=[];
+
+    public ICollection<EmployeeComment> CommentsAuthored {get;set;}=[];
+    public ICollection<EmployeeComment> CommentsRecieved {get;set;}= [];
+    public ICollection<EmployeePermission> PersonalPermissions {get;set;}= [];
+
 }

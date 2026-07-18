@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WZCNet.Contexts;
@@ -11,9 +12,11 @@ using WZCNet.Contexts;
 namespace WZCNet.Migrations
 {
     [DbContext(typeof(WZCNetDbContext))]
-    partial class WZCNetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260718111644_EmploymentHistories")]
+    partial class EmploymentHistories
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -135,55 +138,6 @@ namespace WZCNet.Migrations
                     b.ToTable("EmployeeAddresses");
                 });
 
-            modelBuilder.Entity("WZCNet.Entities.EmployeeComment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AuthorJobTitleSnapshot")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("CreatedByEmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("CreatedDuringEmploymentId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("CreatedForEmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsPrivate")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsResolved")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("RecipientJobTitleSnapshot")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedByEmployeeId");
-
-                    b.HasIndex("CreatedForEmployeeId");
-
-                    b.ToTable("EmployeeComments");
-                });
-
             modelBuilder.Entity("WZCNet.Entities.EmployeeContact", b =>
                 {
                     b.Property<int>("Id")
@@ -220,44 +174,6 @@ namespace WZCNet.Migrations
                     b.ToTable("EmployeeContacts");
                 });
 
-            modelBuilder.Entity("WZCNet.Entities.EmployeePermission", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PermissionId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("ValidFrom")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("ValidUntil")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PermissionId");
-
-                    b.HasIndex("EmployeeId", "PermissionId");
-
-                    b.ToTable("EmployeePermissions");
-                });
-
             modelBuilder.Entity("WZCNet.Entities.EmploymentHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -291,36 +207,6 @@ namespace WZCNet.Migrations
                     b.ToTable("EmploymentHistories");
                 });
 
-            modelBuilder.Entity("WZCNet.Entities.Permission", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PermissionString")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PermissionString")
-                        .IsUnique()
-                        .HasFilter("\"DeletedAt\" IS NULL");
-
-                    b.ToTable("Permissions");
-                });
-
             modelBuilder.Entity("WZCNet.Entities.EmployeeAddress", b =>
                 {
                     b.HasOne("WZCNet.Entities.Employee", "Employee")
@@ -330,25 +216,6 @@ namespace WZCNet.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
-                });
-
-            modelBuilder.Entity("WZCNet.Entities.EmployeeComment", b =>
-                {
-                    b.HasOne("WZCNet.Entities.Employee", "Author")
-                        .WithMany("CommentsAuthored")
-                        .HasForeignKey("CreatedByEmployeeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("WZCNet.Entities.Employee", "Recipient")
-                        .WithMany("CommentsRecieved")
-                        .HasForeignKey("CreatedForEmployeeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Author");
-
-                    b.Navigation("Recipient");
                 });
 
             modelBuilder.Entity("WZCNet.Entities.EmployeeContact", b =>
@@ -370,31 +237,12 @@ namespace WZCNet.Migrations
                     b.Navigation("Employee");
                 });
 
-            modelBuilder.Entity("WZCNet.Entities.EmployeePermission", b =>
-                {
-                    b.HasOne("WZCNet.Entities.Employee", "Employee")
-                        .WithMany("PersonalPermissions")
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("WZCNet.Entities.Permission", "Permission")
-                        .WithMany()
-                        .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Employee");
-
-                    b.Navigation("Permission");
-                });
-
             modelBuilder.Entity("WZCNet.Entities.EmploymentHistory", b =>
                 {
                     b.HasOne("WZCNet.Entities.Employee", "Employee")
                         .WithMany("EmploymentHistories")
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Employee");
@@ -402,17 +250,11 @@ namespace WZCNet.Migrations
 
             modelBuilder.Entity("WZCNet.Entities.Employee", b =>
                 {
-                    b.Navigation("CommentsAuthored");
-
-                    b.Navigation("CommentsRecieved");
-
                     b.Navigation("EmployeeAddresses");
 
                     b.Navigation("EmployeeContacts");
 
                     b.Navigation("EmploymentHistories");
-
-                    b.Navigation("PersonalPermissions");
                 });
 #pragma warning restore 612, 618
         }
