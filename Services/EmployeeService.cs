@@ -81,7 +81,7 @@ public class EmployeeService(WZCNetDbContext context): IEmployeeService
 
     public async Task<IEnumerable<EmployeeBaseDto>> GetEmployeesAsync()
     {
-        var employee = await _db.Employees.Select(e=> new EmployeeBaseDto
+        var employee = await _db.Employees.Include(e=>e.Pin).Select(e=> new EmployeeBaseDto
         {
             Id = e.Id,
             FirstName = e.FirstName,

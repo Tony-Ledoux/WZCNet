@@ -34,6 +34,7 @@ public class EmployeeCreationDTO
     [JsonConverter(typeof(ArrayConverterFactory))]
     [ValidateArrayItems(typeof(EmployeeAddressCreationBase))]
     public EmployeeAddressCreationBase[]? Addresses {get;set;}
+    
 
 
 }

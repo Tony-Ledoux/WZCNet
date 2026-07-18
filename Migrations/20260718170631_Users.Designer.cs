@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WZCNet.Contexts;
@@ -11,9 +12,11 @@ using WZCNet.Contexts;
 namespace WZCNet.Migrations
 {
     [DbContext(typeof(WZCNetDbContext))]
-    partial class WZCNetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260718170631_Users")]
+    partial class Users
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

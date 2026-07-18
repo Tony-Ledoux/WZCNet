@@ -4,7 +4,7 @@ GET {{WZCNet_HostAddress}}/api/employee/
 Accept: application/json
 
 ###
-GET {{WZCNet_HostAddress}}/api/employee/0
+GET {{WZCNet_HostAddress}}/api/employee/1
 Accept: application/json
 ###
 POST {{WZCNet_HostAddress}}/api/employee/
@@ -29,7 +29,10 @@ Content-Type: application/json
         "municipality": "Imaginary"
     }]
     
+
     
     
 }
 ###
+POST {{WZCNet_HostAddress}}/api/employee/1/pin-generate
+Accept: application/json
