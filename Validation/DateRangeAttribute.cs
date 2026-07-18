@@ -6,6 +6,7 @@ public class DateRangeAttribute : ValidationAttribute
 {
     public int MinYearsAgo { get; set; } = 0;
     public int MaxYearsAgo { get; set; } = int.MaxValue;
+    public int MaxYearsFuture { get; set; } = 1000;
     public bool AllowFuture { get; set; } = false;
     public bool AllowPast { get; set; } = true;
 
@@ -16,10 +17,10 @@ public class DateRangeAttribute : ValidationAttribute
             return ValidationResult.Success; // Let [Required] handle nulls
         }
         if (date == default)
-    {
-        return new ValidationResult(
-            ErrorMessage ?? $"{validationContext.DisplayName} is geen geldige datum.");
-    }
+        {
+            return new ValidationResult(
+                ErrorMessage ?? $"{validationContext.DisplayName} is geen geldige datum.");
+        }
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -35,19 +36,34 @@ public class DateRangeAttribute : ValidationAttribute
                 ErrorMessage ?? $"{validationContext.DisplayName} mag niet in het verleden zijn.");
         }
 
-        int yearsAgo = today.Year - date.Year;
-        if (date > today.AddYears(-yearsAgo)) yearsAgo--;
-
-        if (yearsAgo < MinYearsAgo)
+        if (date <= today)
         {
-            return new ValidationResult(
-                ErrorMessage ?? $"{validationContext.DisplayName} moet minstens {MinYearsAgo} jaar geleden zijn.");
+
+
+            int yearsAgo = today.Year - date.Year;
+            if (date > today.AddYears(-yearsAgo)) yearsAgo--;
+
+            if (yearsAgo < MinYearsAgo)
+            {
+                return new ValidationResult(
+                    ErrorMessage ?? $"{validationContext.DisplayName} moet minstens {MinYearsAgo} jaar geleden zijn.");
+            }
+
+            if (MaxYearsAgo != int.MaxValue && yearsAgo > MaxYearsAgo)
+            {
+                return new ValidationResult(
+                    ErrorMessage ?? $"{validationContext.DisplayName} mag niet meer dan {MaxYearsAgo} jaar geleden zijn.");
+            }
         }
-
-        if (MaxYearsAgo != int.MaxValue && yearsAgo > MaxYearsAgo)
+        if (date > today)
         {
-            return new ValidationResult(
-                ErrorMessage ?? $"{validationContext.DisplayName} mag niet meer dan {MaxYearsAgo} jaar geleden zijn.");
+            int yearsToGo = date.Year - today.Year;
+            if (yearsToGo > MaxYearsFuture)
+            {
+                return new ValidationResult(
+                    ErrorMessage ?? $"{validationContext.DisplayName} mag max {MaxYearsFuture} jaar in de toekomst liggen"
+                );
+            }
         }
 
         return ValidationResult.Success;

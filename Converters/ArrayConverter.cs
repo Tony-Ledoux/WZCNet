@@ -17,9 +17,31 @@ public sealed class ArrayConverter<T> : JsonConverter<T[]?>
             throw new JsonException(
                 $"Expected a JSON array for '{typeToConvert.Name}'.");
 
+        //using var document = JsonDocument.ParseValue(ref reader);
+        //return JsonSerializer.Deserialize<T[]>(
+        //    document.RootElement.GetRawText(), options);
         using var document = JsonDocument.ParseValue(ref reader);
-        return JsonSerializer.Deserialize<T[]>(
-            document.RootElement.GetRawText(), options);
+        var results = new List<T>();
+
+        int index = 0;
+        foreach (var element in document.RootElement.EnumerateArray())
+        {
+            try
+            {
+                var item = JsonSerializer.Deserialize<T>(element.GetRawText(), options) ?? throw new JsonException(
+                        $"Please provide a valid {typeof(T).Name} element at index [{index}].");
+                results.Add(item);
+            }
+            catch (JsonException)
+            {
+                throw new JsonException(
+                    $"Please provide a valid {typeof(T).Name} element at index [{index}].");
+            }
+
+            index++;
+        }
+
+        return results.ToArray();
     }
 
     public override void Write(

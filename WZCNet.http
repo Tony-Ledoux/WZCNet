@@ -15,7 +15,15 @@ Content-Type: application/json
     "firstName":"      x         ",
     "lastName":"Alleman            ",
     "dateOfBirth": "2025-02-28",
-    "addresses":[{}]
+    "addresses":[
+        {
+        "zipCode":"2000",
+        "houseNumber":"1",
+        "municipality":"      Antwerpen   ",
+        "streetName":"    Begijnenstraat   ",
+        "until":"2059-05-04"
+    }
+    ]
     
 }
 ###

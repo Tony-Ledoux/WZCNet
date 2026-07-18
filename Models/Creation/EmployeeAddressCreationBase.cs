@@ -34,6 +34,6 @@ public class EmployeeAddressCreationBase
         get => _municipality;
         set => _municipality = value?.Trim() ?? string.Empty;
     }
-    [DateRange(MaxYearsAgo =120)]
+    [DateRange(MaxYearsAgo =120, AllowFuture =true, MaxYearsFuture = 5)]
     public DateOnly? Until {get;set;}
 }
