@@ -11,7 +11,7 @@ namespace WZCNet.Controllers
 {
     [Route("api/employee")]
     [ApiController]
-    public class EmployeeController(IEmployeeService service, WZCNetDbContext context) : ControllerBase
+    public class EmployeeController(IEmployeeService service) : ControllerBase
     {
         private readonly IEmployeeService _srv = service;
 
@@ -26,8 +26,9 @@ namespace WZCNet.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetEmployeeDetails(int id)
         {
-            var Employee = await _srv.GetEmployeeDetailsFromIdAsync(id);
-            return Ok(Employee);
+            var result = await _srv.GetEmployeeDetailsFromIdAsync(id);
+            if(!result.IsSuccess) return Problem(result.Error!,statusCode:404);
+            return Ok(result.Value);
         }
 
 
@@ -35,30 +36,9 @@ namespace WZCNet.Controllers
         public async Task<IActionResult> CreateNewEmployee(EmployeeCreationDTO input)
         {
             var employee = await _srv.CreateEmployeeAsync(input);
+            if(!employee.IsSuccess) return Problem(employee.Error!, statusCode: 400);
             return Created("", employee);
             //return Ok(input);
         }
-        [HttpPost("{id:int}/pin-generate")]
-        public async Task<IActionResult> GeneratePinForEmployeeWithId(int id)
-        {
-            Random rnd = new();
-            string new_pin = rnd.Next(0,1000000).ToString("D6");
-            var employee = await context.Employees.Include(e => e.Pin).FirstOrDefaultAsync(e => e.Id == id);
-            if (employee == null) return NotFound();
-            if (employee.Pin != null)
-            {
-                // Update the existing record
-                employee.Pin.PinHash = new_pin;
-                employee.Pin.PinChangedAt = DateTime.UtcNow;
-            }
-            else
-            {
-                // Create new if it doesn't exist
-                employee.Pin = new EmployeeAuthentication { PinHash = new_pin };
-            }
-            await context.SaveChangesAsync();
-            return Ok(employee);
-        }
-
     }
 }

@@ -556,8 +556,7 @@ namespace WZCNet.Migrations
                     b.HasOne("WZCNet.Entities.Employee", "Employee")
                         .WithOne("Pin")
                         .HasForeignKey("WZCNet.Entities.EmployeeAuthentication", "EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Employee");
                 });

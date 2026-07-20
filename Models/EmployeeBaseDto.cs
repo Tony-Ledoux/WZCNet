@@ -9,7 +9,7 @@ public class EmployeeBaseDto
     public string FirstName {get;set;}
     public string LastName {get;set;}
     public DateOnly DateOfBirth {get;set;}
-    public EmployeeAuthentication? Pin {get;set;}
+  
 
     public int Age
     {

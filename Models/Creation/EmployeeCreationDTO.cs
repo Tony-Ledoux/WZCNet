@@ -28,11 +28,11 @@ public class EmployeeCreationDTO
     }
 
     [Required]
-    [DateRange(MaxYearsAgo = 120)]
+    //[DateRange(MaxYearsAgo = 120)]
     public DateOnly DateOfBirth { get; set; }
 
     [JsonConverter(typeof(ArrayConverterFactory))]
-    [ValidateArrayItems(typeof(EmployeeAddressCreationBase))]
+    //[ValidateArrayItems(typeof(EmployeeAddressCreationBase))]
     public EmployeeAddressCreationBase[]? Addresses {get;set;}
     
 

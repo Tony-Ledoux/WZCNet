@@ -11,4 +11,15 @@ public class EmployeeAuthentication:BaseEntity
 
     public Employee Employee {get;set;}
 
+    private EmployeeAuthentication(){}
+
+    public static EmployeeAuthentication Create(string pin_hash)
+    {
+        return new EmployeeAuthentication
+        {
+            PinHash = pin_hash,
+            PinChangedAt = DateTime.UtcNow
+        };
+    }
+
 }

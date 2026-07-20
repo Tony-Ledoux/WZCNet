@@ -1,3 +1,4 @@
+=== program.cs ===
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using WZCNet.Contexts;
@@ -38,7 +39,6 @@ app.UseExceptionHandler(errorApp =>
         {
             ConflictExeption ex => (409, ex.Message),
             NotFoundException ex => (404, ex.Message),
-            DomainException ex =>(400, ex.Message),
             _ => (500, "An unexpected error occurred.")
         };
 

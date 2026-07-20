@@ -8,7 +8,7 @@ namespace WZCNet.Services;
 public interface IEmployeeService
 {
     Task<IEnumerable<EmployeeBaseDto>> GetEmployeesAsync();
-    Task<EmployeeWithAddressDto?> GetEmployeeDetailsFromIdAsync(int id);
-    Task<EmployeeBaseDto?> CreateEmployeeAsync(EmployeeCreationDTO input);
+    Task<Result<EmployeeBaseDto>> GetEmployeeDetailsFromIdAsync(int id);
+    Task<Result<Employee>> CreateEmployeeAsync(EmployeeCreationDTO input);
 
 }
