@@ -1,0 +1,36 @@
+Solution/
+├── src/
+│   ├── [Domain]/              # 🟢 CORE - Domeinlaag (meest belangrijk)
+│   │   ├── Entities/         # Entiteiten met business logica
+│   │   ├── ValueObjects/     # Value Objects (immutabel, geen identiteit)
+│   │   ├── Aggregates/       # Aggregate Roots
+│   │   ├── DomainEvents/     # Domeingebeurtenissen
+│   │   ├── Exceptions/       # Domein-specifieke uitzonderingen
+│   │   ├── Enums/            # Enumeraties
+│   │   ├── Services/         # Domain Services (als nodig)
+│   │   └── Repositories/     # Repository interfaces (contracts)
+│   │
+│   ├── [Application]/        # 🟡 Applicatielaag
+│   │   ├── Common/           # Dto's, mappers, basisinterfaces
+│   │   ├── Commands/         # CQRS command handlers
+│   │   ├── Queries/          # Query handlers / read models
+│   │   ├── DTOs/             # Data Transfer Objects
+│   │   ├── Interfaces/       # Service interfaces (IToDoService)
+│   │   ├── Services/         # Applicatieservices (orchestratie)
+│   │   └── Validators/       # Business rule validatie
+│   │
+│   ├── [Infrastructure]/     # 🔵 Infrastructuurlaag
+│   │   ├── Persistence/      # DbContext, migrations, repo implementaties
+│   │   ├── Services/         # Externe services (email, logging, etc.)
+│   │   ├── Configuration/    # Instellingen
+│   │   └── Utilities/        # Hulpmiddelen
+│   │
+│   └── [API]/                # 🟣 Presentatielaag
+│       ├── Controllers/      # REST controllers
+│       ├── Middleware/       # Custom middleware
+│       └── Program.cs        # Entry point
+│
+└── tests/
+    ├── [Domain].Tests/
+    ├── [Application].Tests/
+    └── [Integration].Tests/

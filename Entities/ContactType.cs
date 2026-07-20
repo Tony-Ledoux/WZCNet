@@ -1,4 +1,5 @@
 using System;
+using WZCNet.src.Domain.Entities;
 
 namespace WZCNet.Entities;
 

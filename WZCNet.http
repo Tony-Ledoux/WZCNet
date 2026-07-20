@@ -12,10 +12,15 @@ Accept: application/json
 Content-Type: application/json
 
 {
-    "firstName":"Jank",
+    "firstName":"Jank3",
     "lastName":"Alleman            ",
     "dateOfBirth": "2009-02-28",
-    "addresses":[]
+    "addresses":[{
+        "streetName":"begijnenstraat",
+        "houseNumber":"12",
+        "zipCode":"1234",
+        "municipality":"test"
+    }]
 }
 ###
 POST {{WZCNet_HostAddress}}/api/employee/1/pin-generate
