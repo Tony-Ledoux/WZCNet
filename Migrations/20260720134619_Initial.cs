@@ -4,6 +4,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace WZCNet.Migrations
 {
     /// <inheritdoc />
@@ -358,6 +360,15 @@ namespace WZCNet.Migrations
                         principalTable: "JobTitles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.InsertData(
+                table: "ContactTypes",
+                columns: new[] { "Id", "CreatedAt", "DeletedAt", "TypeOfContact", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, new DateTime(2026, 6, 30, 22, 0, 0, 0, DateTimeKind.Utc), null, "Email", null },
+                    { 2, new DateTime(2026, 6, 30, 22, 0, 0, 0, DateTimeKind.Utc), null, "GSM", null }
                 });
 
             migrationBuilder.CreateIndex(

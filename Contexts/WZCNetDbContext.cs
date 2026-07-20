@@ -46,6 +46,18 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbCont
         // contactTypes
         modelBuilder.Entity<ContactType>().HasIndex(ct => ct.TypeOfContact).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
         modelBuilder.Entity<EmployeeContact>().HasOne(ec => ec.ContactType).WithMany().HasForeignKey(ec => ec.ContactTypeId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ContactType>().HasData([
+            new(){
+                Id = 1,
+                TypeOfContact = "Email",
+                CreatedAt = DateTime.Parse("2026-07-01").ToUniversalTime()
+            },
+            new(){
+                Id = 2,
+                TypeOfContact = "GSM",
+                CreatedAt = DateTime.Parse("2026-07-01").ToUniversalTime()
+            }
+        ]);
 
         //EmploymentHistorie
         modelBuilder.Entity<EmploymentHistory>().HasOne(eh => eh.Employee).WithMany(e => e.EmploymentHistories).HasForeignKey(eh => eh.EmployeeId).OnDelete(DeleteBehavior.Cascade);

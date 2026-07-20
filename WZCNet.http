@@ -4,7 +4,7 @@ GET {{WZCNet_HostAddress}}/api/employee/
 Accept: application/json
 
 ###
-GET {{WZCNet_HostAddress}}/api/employee/99
+GET {{WZCNet_HostAddress}}/api/employee/1
 Accept: application/json
 ###
 POST {{WZCNet_HostAddress}}/api/employee/
@@ -12,16 +12,10 @@ Accept: application/json
 Content-Type: application/json
 
 {
-    "firstName":"Jan",
+    "firstName":"Jank",
     "lastName":"Alleman            ",
-    "dateOfBirth": "2009-01-05",
-    "addresses":[{
-        "streetName":"Begijnenstraat",
-        "houseNumber":"1",
-        "zipCode":"1234",
-        "municipality":"Antwerpen"
-
-    }]
+    "dateOfBirth": "2009-02-28",
+    "addresses":[]
 }
 ###
 POST {{WZCNet_HostAddress}}/api/employee/1/pin-generate

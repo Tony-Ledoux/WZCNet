@@ -12,7 +12,7 @@ using WZCNet.Contexts;
 namespace WZCNet.Migrations
 {
     [DbContext(typeof(WZCNetDbContext))]
-    [Migration("20260720132844_Initial")]
+    [Migration("20260720134619_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -99,6 +99,20 @@ namespace WZCNet.Migrations
                         .HasFilter("\"DeletedAt\" IS NULL");
 
                     b.ToTable("ContactTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 6, 30, 22, 0, 0, 0, DateTimeKind.Utc),
+                            TypeOfContact = "Email"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 6, 30, 22, 0, 0, 0, DateTimeKind.Utc),
+                            TypeOfContact = "GSM"
+                        });
                 });
 
             modelBuilder.Entity("WZCNet.Entities.Employee", b =>
