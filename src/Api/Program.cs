@@ -1,7 +1,6 @@
 
 using Microsoft.EntityFrameworkCore;
 using WZCNet.src.Application.Converters;
-using WZCNet.src.Application.Services;
 using WZCNet.src.Infrastructure.Persistence.Contexts;
 
 
@@ -20,7 +19,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
-builder.Services.AddScoped<IEmployeeService,EmployeeService>();
+
 
 var app = builder.Build();
 

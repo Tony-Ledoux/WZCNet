@@ -1,21 +1,21 @@
+
 using WZCNet.src.Domain.Common;
-using WZCNet.src.Domain.Interfaces;
 
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
 
-namespace WZCNet.src.Domain.ValueObjects;
-
-public sealed class Address: ISoftDeletable
+public class EmployeeAddress: BaseEntity
 {
+    public int EmployeeId {get; private set;}
     public string StreetName { get; private set;}
     public string HouseNumber { get; private set;}
     public string ZipCode { get; private set;}
     public string Municipality { get; private set; }
     public DateOnly? Until { get; private set; }
-    public DateTime? DeletedAt { get ; set ; }
+    public Employee  Employee {get;set;}
+   
+    private EmployeeAddress() { }
 
-    private Address() { }
-
-    public static Result<Address> Create(string streetName, string houseNumber, 
+    public static Result<EmployeeAddress> Create(string streetName, string houseNumber, 
         string zipCode, string municipality, DateOnly? until)
     {
         ArgumentException.ThrowIfNullOrEmpty(streetName, nameof(streetName));
@@ -27,10 +27,11 @@ public sealed class Address: ISoftDeletable
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
             if (until.Value < today.AddYears(-100) || until.Value > today.AddYears(100))
-                return Result<Address>.Failure("'Until' datum moet tussen 100 jaar geleden en 100 jaar in de toekomst liggen.");
+                return Result<EmployeeAddress>.Failure("'Until' datum moet tussen 100 jaar geleden en 100 jaar in de toekomst liggen.");
         }
-        return Result<Address>.Success(new Address 
+        return Result<EmployeeAddress>.Success(new EmployeeAddress 
         { 
+            
             StreetName = streetName.Trim(),
             HouseNumber = houseNumber.Trim(),
             ZipCode = zipCode.Trim(),

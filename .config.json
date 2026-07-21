@@ -1,7 +1,0 @@
-{
-  "migrations": {
-    "default": {
-      "directory": "src/Infrastructure/Persistence/Migrations"
-    }
-  }
-}

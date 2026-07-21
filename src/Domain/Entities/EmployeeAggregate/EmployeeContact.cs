@@ -1,8 +1,6 @@
-using System;
 using System.ComponentModel.DataAnnotations.Schema;
-using WZCNet.src.Domain.Entities;
 
-namespace WZCNet.Entities;
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
 
 public class EmployeeContact: BaseEntity
 {
@@ -10,10 +8,8 @@ public class EmployeeContact: BaseEntity
     public int ContactTypeId {get;set;}
     public string ContactDetails {get;set;}
 
-    // navigational properties
-    [ForeignKey(nameof(EmployeeId))]
+
     public Employee Employee {get;set;}
 
-    [ForeignKey(nameof(ContactTypeId))]
     public ContactType ContactType {get;set;}
 }

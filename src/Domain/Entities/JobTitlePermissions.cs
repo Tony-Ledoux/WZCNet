@@ -1,7 +1,5 @@
-using System;
-using WZCNet.src.Domain.Entities;
 
-namespace WZCNet.Entities;
+namespace WZCNet.src.Domain.Entities;
 
 public class JobTitlePermissions: BaseEntity
 {

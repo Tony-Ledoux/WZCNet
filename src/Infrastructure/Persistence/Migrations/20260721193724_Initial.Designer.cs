@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WZCNet.src.Infrastructure.Persistence.Contexts;
@@ -11,9 +12,11 @@ using WZCNet.src.Infrastructure.Persistence.Contexts;
 namespace WZCNet.src.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(WZCNetDbContext))]
-    partial class WZCNetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260721193724_Initial")]
+    partial class Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -560,113 +563,6 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                     b.ToTable("Rooms");
                 });
 
-            modelBuilder.Entity("WZCNet.src.Domain.Entities.ServiceOrderAggregate.ServiceOrder", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreateByEmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Problem")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("RoomId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("StatusId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreateByEmployeeId");
-
-                    b.HasIndex("RoomId");
-
-                    b.HasIndex("StatusId");
-
-                    b.ToTable("ServiceOrder");
-                });
-
-            modelBuilder.Entity("WZCNet.src.Domain.Entities.ServiceOrderAggregate.ServiceOrderComment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AuthorId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Comment")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("ServiceOrderId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AuthorId");
-
-                    b.HasIndex("ServiceOrderId");
-
-                    b.ToTable("ServiceOrderComment");
-                });
-
-            modelBuilder.Entity("WZCNet.src.Domain.Entities.ServiceOrderAggregate.ServiceOrderStatus", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Status")
-                        .IsUnique()
-                        .HasFilter("\"DeletedAt\" IS NULL");
-
-                    b.ToTable("ServiceOrderStatus");
-                });
-
             modelBuilder.Entity("WZCNet.src.Domain.Entities.AppUserEmployee", b =>
                 {
                     b.HasOne("WZCNet.src.Domain.Entities.AppUser", "AppUser")
@@ -896,51 +792,6 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                     b.Navigation("Floor");
                 });
 
-            modelBuilder.Entity("WZCNet.src.Domain.Entities.ServiceOrderAggregate.ServiceOrder", b =>
-                {
-                    b.HasOne("WZCNet.src.Domain.Entities.EmployeeAggregate.Employee", "CreatedByEmployee")
-                        .WithMany()
-                        .HasForeignKey("CreateByEmployeeId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("WZCNet.src.Domain.Entities.Room", "Room")
-                        .WithMany()
-                        .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("WZCNet.src.Domain.Entities.ServiceOrderAggregate.ServiceOrderStatus", "Status")
-                        .WithMany()
-                        .HasForeignKey("StatusId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByEmployee");
-
-                    b.Navigation("Room");
-
-                    b.Navigation("Status");
-                });
-
-            modelBuilder.Entity("WZCNet.src.Domain.Entities.ServiceOrderAggregate.ServiceOrderComment", b =>
-                {
-                    b.HasOne("WZCNet.src.Domain.Entities.EmployeeAggregate.Employee", "Author")
-                        .WithMany()
-                        .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("WZCNet.src.Domain.Entities.ServiceOrderAggregate.ServiceOrder", "ServiceOrder")
-                        .WithMany("Comments")
-                        .HasForeignKey("ServiceOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Author");
-
-                    b.Navigation("ServiceOrder");
-                });
-
             modelBuilder.Entity("WZCNet.src.Domain.Entities.EmployeeAggregate.Employee", b =>
                 {
                     b.Navigation("Addresses");
@@ -962,11 +813,6 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("WZCNet.src.Domain.Entities.JobTitle", b =>
                 {
                     b.Navigation("JobTitlePermissions");
-                });
-
-            modelBuilder.Entity("WZCNet.src.Domain.Entities.ServiceOrderAggregate.ServiceOrder", b =>
-                {
-                    b.Navigation("Comments");
                 });
 #pragma warning restore 612, 618
         }

@@ -2,116 +2,132 @@
 using Microsoft.EntityFrameworkCore;
 using WZCNet.src.Domain.Interfaces;
 using WZCNet.src.Domain.Entities;
-using WZCNet.src.Domain.ValueObjects;
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
+using WZCNet.src.Domain.Entities.ServiceOrderAggregate;
+
 
 namespace WZCNet.src.Infrastructure.Persistence.Contexts;
 
 public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbContext(options)
 {
     public DbSet<Employee> Employees { get; set; }
-    //public DbSet<ContactType> ContactTypes { get; set; }
-    //public DbSet<EmployeeContact> EmployeeContacts { get; set; }
-    //public DbSet<EmploymentHistory> EmploymentHistories { get; set; }
-    //public DbSet<EmployeeComment> EmployeeComments { get; set; }
-    //public DbSet<Permission> Permissions { get; set; }
-    //public DbSet<EmployeePermission> EmployeePermissions { get; set; }
-    //public DbSet<JobTitle> JobTitles { get; set; }
-    //public DbSet<EmploymentHistoryJobTitle> EmploymentHistoryJobTitles { get; set; }
-    //public DbSet<JobTitlePermissions> JobTitlePermissions { get; set; }
-    //public DbSet<AppUser> AppUsers { get; set; }
-    //public DbSet<EmployeeUser> EmployeeUsers { get; set; }
+    public DbSet<EmployeeAddress> EmployeeAddresses {get;set;}
+    public DbSet<ContactType> ContactTypes { get; set; }
+    public DbSet<EmployeeContact> EmployeeContacts { get; set; }
+    public DbSet<EmployeeEmploymentHistory> EmploymentHistories { get; set; }
+    public DbSet<EmployeeEmploymentHistoryJobTitleAssignment> EmployeeEmploymentHistoryJobTitleAssignments {get;set;}
+    public DbSet<Permission> Permissions { get; set; }
+    public DbSet<JobTitle> JobTitles { get; set; }
+    public DbSet<EmployeeComment> EmployeeComments {get;set;}
+    public DbSet<AppUser> AppUsers {get;set;}
+    public DbSet<Floor> Floors {get;set;}
+    public DbSet<Department> Departments {get;set;}
+    public DbSet<Room> Rooms {get;set;}
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-       
-
-
         // Employee 
         modelBuilder.Entity<Employee>(entity =>
         {
-            entity.OwnsOne(e => e.Name, nameBuilder =>
-            {
-                nameBuilder.Property(n => n.First).IsRequired();
-                nameBuilder.Property(n => n.Last).IsRequired();
-            });
             entity.OwnsOne(e => e.Pin, pinBuilder =>
             {
-                pinBuilder.Property(p=>p.EmployeeId).IsRequired();
                 pinBuilder.Property(p=>p.PinHash).IsRequired();
                 pinBuilder.Property(p=>p.PinChangedAt).IsRequired(false);
                 pinBuilder.Property(p=>p.PinLastUsedAt).IsRequired(false);
             });
-
-
-            entity.OwnsMany(e => e.Addresses);
-            /*
-            // Relations
-            entity.HasMany(e => e.EmployeeContacts)
-                .WithOne(ct => ct.Employee)
-                .HasForeignKey(ct => ct.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            */
-
-
-            // Unique index op Name.First + Name.Last + DateOfBirth
-            //entity.HasIndex(e => new { e.Name.First, e.Name.Last, e.DateOfBirth })
-            //    .IsUnique()
-            //    .HasFilter("\"DeletedAt\" IS NULL");
+            entity.OwnsMany(e=>e.EmployeeContacts, contactBuilder =>
+            {
+                contactBuilder.HasOne(ec=>ec.ContactType).WithMany().HasForeignKey(ec=>ec.ContactTypeId).OnDelete(DeleteBehavior.Restrict);
+            });
+            entity.HasMany(e=>e.EmploymentHistories).WithOne(eh=>eh.Employee).HasForeignKey(eh=>eh.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.FirstName,e.LastName, e.DateOfBirth }).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
         });
-        // modelBuilder.Entity<Employee>().HasMany(e => e.EmployeeAddresses).WithOne(ea => ea.Employee).HasForeignKey(ea => ea.EmployeeId).OnDelete(DeleteBehavior.Cascade);
-        // modelBuilder.Entity<Employee>().HasMany(e => e.EmployeeContacts).WithOne(ct => ct.Employee).HasForeignKey(ct => ct.EmployeeId).OnDelete(DeleteBehavior.Cascade);
-        // modelBuilder.Entity<Employee>().HasIndex(e => new { e.Name.First, e.Name.Last, e.DateOfBirth }).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
-        // modelBuilder.Entity<Employee>().HasOne(e => e.Pin).WithOne(p => p.Employee).HasForeignKey<EmployeeAuthentication>(eaf => eaf.EmployeeId).OnDelete(DeleteBehavior.Cascade).IsRequired(false);
-        /*
-        // contactTypes
-        modelBuilder.Entity<ContactType>().HasIndex(ct => ct.TypeOfContact).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
-        modelBuilder.Entity<EmployeeContact>().HasOne(ec => ec.ContactType).WithMany().HasForeignKey(ec => ec.ContactTypeId).OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<ContactType>().HasData([
-            new(){
-                Id = 1,
-                TypeOfContact = "Email",
-                CreatedAt = DateTime.Parse("2026-07-01").ToUniversalTime()
-            },
-            new(){
-                Id = 2,
-                TypeOfContact = "GSM",
-                CreatedAt = DateTime.Parse("2026-07-01").ToUniversalTime()
-            }
-        ]);
+        modelBuilder.Entity<EmployeeAddress>(entity =>
+        {
+            entity.HasOne(e=>e.Employee).WithMany(em=>em.Addresses).HasForeignKey(e=>e.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ContactType>(entity =>
+        {
+            entity.HasIndex(ct=>ct.TypeOfContact).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+        });
+        //employmenthistory
+        modelBuilder.Entity<EmployeeEmploymentHistory>(entity =>
+        {
+            entity.HasOne(eh=>eh.Employee).WithMany(e=>e.EmploymentHistories).HasForeignKey(eh=>eh.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(eh=>eh.JobTitleAssignments).WithOne(jta=>jta.EmploymentHistory).HasForeignKey(jta=>jta.EmploymentHistoryId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<EmployeeEmploymentHistoryJobTitleAssignment>(entity =>
+        {
+            entity.HasOne(ehjta=>ehjta.EmploymentHistory).WithMany(eh=>eh.JobTitleAssignments).HasForeignKey(ehjta=>ehjta.EmploymentHistoryId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(ehjta=>ehjta.JobTitle).WithMany().HasForeignKey(ehjta=>ehjta.JobTitleId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(ehjta=>ehjta.Department).WithMany().HasForeignKey(ehjta=>ehjta.PrincipalDepartmentId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<JobTitle>(entity =>
+        {
+           entity.HasIndex(jt=>jt.JobTitleString).IsUnique().HasFilter("\"DeletedAt\" IS NULL"); 
+        });
 
-        //EmploymentHistorie
-        modelBuilder.Entity<EmploymentHistory>().HasOne(eh => eh.Employee).WithMany(e => e.EmploymentHistories).HasForeignKey(eh => eh.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.HasIndex(p=>p.PermissionString).IsUnique().HasFilter("\"DeletedAt\" IS NULL"); 
+        });
 
-        //EmployeeComment
-        modelBuilder.Entity<EmployeeComment>().HasOne(ec => ec.Author).WithMany(e => e.CommentsAuthored).HasForeignKey(ec => ec.CreatedByEmployeeId).OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<EmployeeComment>().HasOne(ec => ec.Recipient).WithMany(e => e.CommentsRecieved).HasForeignKey(ec => ec.CreatedForEmployeeId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<EmployeePermission>(entity =>
+        {
+            entity.HasOne(ep=>ep.Employee).WithMany(e=>e.PersonalPermissions).HasForeignKey(ep=>ep.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(ep=>ep.Permission).WithMany().HasForeignKey(ep=>ep.PermissionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(ep=> new{ep.EmployeeId,ep.PermissionId});
+        });
 
-        //Permission
-        modelBuilder.Entity<Permission>().HasIndex(p => p.PermissionString).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+        modelBuilder.Entity<JobTitlePermissions>(entity =>
+        {
+            entity.HasOne(jtpm=>jtpm.Permission).WithMany().HasForeignKey(jtpm=>jtpm.PermissionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(jtpm=>jtpm.JobTitle).WithMany(jt=>jt.JobTitlePermissions).HasForeignKey(jtpm=>jtpm.JobTitleId).OnDelete(DeleteBehavior.Restrict);
+        });
 
-        //EmployeePermission
-        modelBuilder.Entity<EmployeePermission>().HasOne(ep => ep.Employee).WithMany(e => e.PersonalPermissions).HasForeignKey(ep => ep.EmployeeId).OnDelete(DeleteBehavior.Cascade);
-        modelBuilder.Entity<EmployeePermission>().HasOne(ep => ep.Permission).WithMany().HasForeignKey(ep => ep.PermissionId).OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<EmployeePermission>().HasIndex(ep => new { ep.EmployeeId, ep.PermissionId });
+        modelBuilder.Entity<EmployeeComment>(entity => 
+        {
+            entity.HasOne(ec=>ec.Author).WithMany(e=>e.CommentsAuthored).HasForeignKey(ec=>ec.CreatedByEmployeeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(ec=>ec.Recipient).WithMany(e=>e.CommentsRecieved).HasForeignKey(ec=>ec.CreatedForEmployeeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(ec=>ec.EmploymentHistory).WithMany().HasForeignKey(ec=>ec.CreatedDuringEmploymentId).OnDelete(DeleteBehavior.Restrict);
+            entity.Property(ec=>ec.AuthorJobTitleSnapshot).IsRequired();
+            entity.Property(ec=>ec.RecipientJobTitleSnapshot).IsRequired();
+        });
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.HasMany(a => a.Employees).WithMany(e => e.AppUsers).UsingEntity<AppUserEmployee>(je =>
+            {
+                je.HasOne(j=>j.AppUser).WithMany().HasForeignKey(j=>j.AppUsersId).OnDelete(DeleteBehavior.Cascade);
+                je.HasOne(j=>j.Employee).WithMany().HasForeignKey(j=>j.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            });
+        });
 
-        //jobtitle
-        modelBuilder.Entity<JobTitle>().HasIndex(jt => jt.JobTitleString).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
-        modelBuilder.Entity<JobTitlePermissions>().HasOne(jtpm => jtpm.Permission).WithMany().HasForeignKey(jtpm => jtpm.PermissionId).OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<JobTitlePermissions>().HasOne(jtpm => jtpm.JobTitle).WithMany(jt => jt.JobTitlePermissions).HasForeignKey(jtpm => jtpm.JobTitleId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Room>(entity =>
+        {
+            entity.HasOne(r=>r.Floor).WithMany().HasForeignKey(r=>r.FloorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r=>r.Department).WithMany().HasForeignKey(r=>r.DepartmentId).OnDelete(DeleteBehavior.Restrict);
+        });
 
-
-        //employeeJobtitleHistorie
-        modelBuilder.Entity<EmploymentHistoryJobTitle>().HasOne(ehjt => ehjt.EmploymentHistory).WithMany(eh => eh.EmploymentHistoryJobTitles).HasForeignKey(ehjt => ehjt.EmploymentHistoryId).OnDelete(DeleteBehavior.Cascade);
-        modelBuilder.Entity<EmploymentHistoryJobTitle>().HasOne(ehjt => ehjt.JobTitle).WithMany().HasForeignKey(ehjt => ehjt.JobTitleId).OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<AppUser>().HasIndex(au => au.UserName).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
-        // AppUser <-> EmployeeHistories many-to-many via EmployeeUser
-        modelBuilder.Entity<EmployeeUser>().HasOne(eu => eu.EmploymentHistory).WithMany(eh => eh.EmployeeUsers).HasForeignKey(eu => eu.EmploymentHistoryId).OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<EmployeeUser>().HasOne(eu => eu.AppUser).WithMany(au => au.EmployeeUsers).HasForeignKey(eu => eu.AppUserId).OnDelete(DeleteBehavior.Restrict);
-        //modelBuilder.Entity<EmployeeUser>().HasIndex(eu => new { eu.EmployeeId, eu.AppUserId }).IsUnique().HasFilter("\"DeletedAt\" IS NULL"); // a history can be used on multiple accounts
-        */
+        // ServiceOrders
+        modelBuilder.Entity<ServiceOrderStatus>(entity =>
+        {
+            entity.HasIndex(sos=>sos.Status).IsUnique(true).HasFilter("\"DeletedAt\" IS NULL");
+        });
+        modelBuilder.Entity<ServiceOrder>(entity =>
+        {
+            entity.HasOne(so=>so.Room).WithMany().HasForeignKey(so=>so.RoomId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(so=>so.Status).WithMany().HasForeignKey(so=>so.StatusId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(so=>so.CreatedByEmployee).WithMany().HasForeignKey(so=>so.CreateByEmployeeId).OnDelete(DeleteBehavior.SetNull);
+        });
+        modelBuilder.Entity<ServiceOrderComment>(entity =>
+        {
+            entity.HasOne(c=>c.Author).WithMany().HasForeignKey(c=>c.AuthorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c=>c.ServiceOrder).WithMany(so=>so.Comments).HasForeignKey(c=>c.ServiceOrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+       
+       
          // Global query filter: automatically excludes soft-deleted records
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {

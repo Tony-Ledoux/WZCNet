@@ -1,8 +1,4 @@
-using System;
-using System.ComponentModel.DataAnnotations.Schema;
-using WZCNet.src.Domain.Entities;
-
-namespace WZCNet.Entities;
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
 
 public class EmployeeComment: BaseEntity
 {
@@ -18,6 +14,6 @@ public class EmployeeComment: BaseEntity
     
     public Employee Author {get;set;}
     public Employee Recipient {get;set;}
-
-
+    public EmployeeEmploymentHistory EmploymentHistory {get;set;}
+  
 }
