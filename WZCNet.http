@@ -1,6 +1,27 @@
 @WZCNet_HostAddress = http://localhost:5187
 
-GET {{WZCNet_HostAddress}}/api/employee/
+POST {{WZCNet_HostAddress}}/api/auth/register
+Accept: application/json
+Content-Type: application/json
+
+{
+    "userName":"afd0@halmolen.be",
+    "password":"12345"
+}
+
+###
+POST {{WZCNet_HostAddress}}/api/auth/login
+Accept: application/json
+Content-Type: application/json
+
+{
+    "userName":"afd0@halmolen.be",
+    "password":"12345"
+}
+
+###
+GET {{WZCNet_HostAddress}}/api/auth
+Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWZkMEBoYWxtb2xlbi5iZSIsImV4cCI6MTc4NDc1ODk4MCwiaXNzIjoiV1pDTkVULUJBQ0tFTkQiLCJhdWQiOiJXWkNORVQtRlJPTlRFTkQifQ.tZjXSyKwuKMic2jV74zj7ArexfNJhHaxyuz1g_mQrZw97kj5IT1cZHEqMNBAzr-aF0ajDv9mCFLwId7TRmagNQ
 Accept: application/json
 
 ###

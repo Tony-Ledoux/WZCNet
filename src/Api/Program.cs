@@ -1,12 +1,19 @@
 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using WZCNet.src.Application.Converters;
 using WZCNet.src.Infrastructure.Persistence.Contexts;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using WZCNet.src.Application.Extensions;
+using WZCNet.src.Api.Extensions;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddApplicationServices();
+builder.Services.AddApplicationAuthentication(builder.Configuration);
 
 builder.Services.AddDbContext<WZCNetDbContext>(DbContextOptions =>
 {
@@ -19,11 +26,10 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
-
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
