@@ -55,6 +55,12 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("PasswordLastChangedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RefreshTokenValidUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 

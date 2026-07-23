@@ -4,29 +4,27 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 using WZCNet.src.Application.DTOs;
 using WZCNet.src.Application.DTOs.Requests.Auth;
 using WZCNet.src.Application.Interfaces;
 using WZCNet.src.Domain.Entities;
+using WZCNet.src.Domain.Interfaces;
 
 namespace WZCNet.src.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController(ITokenService ts, IUserService us) : ControllerBase
     {
-        public static AppUser user = new();
+       
         [HttpPost("register")]
-        public ActionResult<AppUser> Register(LoginRequestDto request)
+        public async Task<ActionResult<AppUser>> Register(LoginRequestDto request)
         {
-            var hashedPassword = new PasswordHasher<AppUser>().HashPassword(user, request.Password);
-
-            user.UserName = request.UserName;
-            user.PasswordHash = hashedPassword;
-            return Ok(user);
+            var user = await us.Register(request);
+            if(!user.IsSuccess) return BadRequest(user.Error);
+            return Ok(user.Value);
         }
-
+        /*
         [HttpPost("login")]
         public async Task<ActionResult<string>> Login(LoginRequestDto request, ITokenService _ts)
         {
@@ -47,6 +45,6 @@ namespace WZCNet.src.Api.Controllers
         {
             return Ok("dit is een test");
         }
-
+        */
     }
 }

@@ -12,7 +12,7 @@ using WZCNet.src.Infrastructure.Persistence.Contexts;
 namespace WZCNet.src.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(WZCNetDbContext))]
-    [Migration("20260721203026_SO")]
+    [Migration("20260722221801_SO")]
     partial class SO
     {
         /// <inheritdoc />
@@ -56,6 +56,12 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("PasswordLastChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RefreshTokenValidUntil")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("UpdatedAt")

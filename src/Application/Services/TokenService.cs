@@ -26,7 +26,7 @@ public class TokenService(IConfiguration configuration) : ITokenService
                 issuer: configuration.GetValue<string>("AppSettings:Issuer"),
                 audience: configuration.GetValue<string>("AppSettings:Audience"),
                 claims: claims,
-                expires: DateTime.UtcNow.AddDays(1),
+                expires: DateTime.UtcNow.AddMinutes(5),
                 signingCredentials: creds
             );
             return Task.FromResult(new JwtSecurityTokenHandler().WriteToken(tokenDescriptor));
