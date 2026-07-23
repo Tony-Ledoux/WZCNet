@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
 using WZCNet.src.Application.DTOs;
 using WZCNet.src.Application.DTOs.Requests.Auth;
@@ -31,6 +32,14 @@ public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenSer
                 UserName = user.UserName
             };
         string token = await _ts.CreateBearerToken(ts);
+        //create a refreshtoken
+        if(user.RefreshToken == null)
+        {
+            //generate a token
+            user.RefreshToken = GenerateRefreshToken();
+            user.RefreshTokenValidUntil = DateTime.UtcNow.AddDays(30);
+
+        }
         await db_actions.SaveChangesAsync();
         return Result<string>.Success(token);
     }
@@ -47,6 +56,14 @@ public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenSer
         await db_actions.SaveChangesAsync();
         return user;
 
+    }
+
+    private string GenerateRefreshToken()
+    {
+        var randomNumber = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomNumber);
+        return Convert.ToBase64String(randomNumber);
     }
 
     
