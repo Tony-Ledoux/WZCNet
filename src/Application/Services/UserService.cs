@@ -31,6 +31,7 @@ public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenSer
                 UserName = user.UserName
             };
         string token = await _ts.CreateBearerToken(ts);
+        await db_actions.SaveChangesAsync();
         return Result<string>.Success(token);
     }
 
