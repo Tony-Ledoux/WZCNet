@@ -1,17 +1,18 @@
-using System;
-using System.Security.Cryptography;
+using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
 using WZCNet.src.Application.DTOs;
 using WZCNet.src.Application.DTOs.Requests.Auth;
+using WZCNet.src.Application.DTOs.Responses;
 using WZCNet.src.Application.Interfaces;
 using WZCNet.src.Application.Interfaces.Repositories;
 using WZCNet.src.Domain.Common;
 using WZCNet.src.Domain.Entities;
 using WZCNet.src.Domain.Interfaces;
+using WZCNet.src.Domain.ValueObjects;
 
 namespace WZCNet.src.Application.Services;
 
-public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenService _ts) : IUserService
+public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenService _ts, IRequestContext rc) : IUserService
 {
     public string HashPassword(string password)
     {
@@ -19,13 +20,14 @@ public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenSer
         return passwordHasher.HashPassword(null,password);
     }
 
-    public async Task<Result<string>> Login(LoginRequestDto requestDto)
+    public async Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto)
     {
+        //TODO obscure the response on username/password error
         var user = await repo.GetAppuserByUserName(requestDto.UserName);
-        if(user == null) return Result<string>.Failure("Gebruiker bestaat niet");
+        if(user == null) return Result<LoginResponseDto>.Failure("Gebruiker bestaat niet");
         //check the password
         var passwordHasher = new PasswordHasher<AppUser>();
-        if(passwordHasher.VerifyHashedPassword(user,user.PasswordHash,requestDto.Password) == PasswordVerificationResult.Failed) return Result<string>.Failure("Ongeldig wachtwoord");
+        if(passwordHasher.VerifyHashedPassword(user,user.PasswordHash,requestDto.Password) == PasswordVerificationResult.Failed) return Result<LoginResponseDto>.Failure("Ongeldig wachtwoord");
         user.LastLogin = DateTime.UtcNow;
         // create Jwt
         var ts = new TokenClaimsDTO {
@@ -33,17 +35,22 @@ public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenSer
             };
         string token = await _ts.CreateBearerToken(ts);
         //create a refreshtoken
-        if(user.RefreshToken == null)
-        {
-            //generate a token
-            user.RefreshToken = GenerateRefreshToken();
-            user.RefreshTokenValidUntil = DateTime.UtcNow.AddDays(30);
-
-        }
+        
+        var rf = Refreshtoken.GetRefreshtoken(user.Id,SessionInfo.Create(rc.DeviceInfo,rc.IpAddress));
+        user.Refreshtokens.Add(rf);
+        
         await db_actions.SaveChangesAsync();
-        return Result<string>.Success(token);
+
+        return Result<LoginResponseDto>.Success(new LoginResponseDto{AccessToken=token,RefreshToken=rf.RefreshToken});
     }
 
+    /*
+    public async Task<Result<LoginResponseDto>> Refresh(RefreshRequestDto request)
+    {
+        var user = await repo.GetAppUserByIdAsync(request.AccountId);
+        if(user == null) return Result<LoginResponseDto>.Failure("Geen gekende gebruiker"); 
+    }
+    */
     public async Task<Result<AppUser>> Register(LoginRequestDto request)
     {
         // check for duplicate
@@ -58,18 +65,4 @@ public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenSer
 
     }
 
-    private string GenerateRefreshToken()
-    {
-        var randomNumber = new byte[32];
-        using var rng = RandomNumberGenerator.Create();
-        rng.GetBytes(randomNumber);
-        return Convert.ToBase64String(randomNumber);
-    }
-
-    
-
-    public bool VerifyPassword(string userName, string password)
-    {
-        throw new NotImplementedException();
-    }
 }

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using WZCNet.src.Domain.Common;
 using WZCNet.src.Domain.Entities.EmployeeAggregate;
 
@@ -11,9 +12,7 @@ public class AppUser: BaseEntity
     public int NumberOfFailedLoginAttempts {get;set;}
     public DateTime? LastLogin {get;set;}
     public DateTime? PasswordLastChangedAt {get;set;}
-    public string? RefreshToken {get;set;}
-    public DateTime? RefreshTokenValidUntil {get;set;}
-
+    public ICollection<Refreshtoken> Refreshtokens {get;set;}=[];
     public ICollection<Employee> Employees {get;set;}=[];
 
     private AppUser(){}
@@ -31,7 +30,6 @@ public class AppUser: BaseEntity
         };
         return Result<AppUser>.Success(user);
     }
-
 
     
 }

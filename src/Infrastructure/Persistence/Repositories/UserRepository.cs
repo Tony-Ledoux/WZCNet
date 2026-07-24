@@ -23,4 +23,10 @@ public class UserRepository(WZCNetDbContext context) : IUserRepository
     {
         return await context.AppUsers.AnyAsync(au=>au.UserName == userName);
     }
+
+    public async Task<AppUser?> GetAppUserByIdAsync(int id)
+    {
+        return await context.AppUsers.FindAsync(id);
+    }
+
 }

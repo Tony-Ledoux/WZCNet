@@ -1,55 +1,187 @@
-=== program.cs ===
-using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.EntityFrameworkCore;
-using WZCNet.Contexts;
-using WZCNet.Converters;
-using WZCNet.Exeptions;
-using WZCNet.Services;
+=== AppUser.cs ===
+using System.Security.Cryptography;
+using WZCNet.src.Domain.Common;
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-
-builder.Services.AddDbContext<WZCNetDbContext>(DbContextOptions =>
+namespace WZCNet.src.Domain.Entities;
+public class AppUser: BaseEntity
 {
-    DbContextOptions.UseNpgsql(builder.Configuration["ConnectionStrings:Default"]);
-});
+    public string UserName {get;set;}
+    public string PasswordHash {get;set;}
+    public bool IsPersonalAccount {get;set;}
+    public bool IsActive {get;set;} = true;
+    public int NumberOfFailedLoginAttempts {get;set;}
+    public DateTime? LastLogin {get;set;}
+    public DateTime? PasswordLastChangedAt {get;set;}
+    public string? RefreshToken {get;set;}
+    public DateTime? RefreshTokenValidUntil {get;set;}
 
-builder.Services.AddControllers().AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
-    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-});
+    public ICollection<Employee> Employees {get;set;}=[];
 
-builder.Services.AddScoped<IEmployeeService,EmployeeService>();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-app.UseAuthorization();
-
-app.MapControllers();
-app.UseExceptionHandler(errorApp =>
-{
-    errorApp.Run(async context =>
+    private AppUser(){}
+    public static Result<AppUser> Create(string userName,string passwordHash, bool IsPersonalAccount = false)
     {
-        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
-
-        (int statusCode, string message) = exception switch
+        // Validate required parameters
+        if (string.IsNullOrWhiteSpace(userName)) return Result<AppUser>.Failure("username kan niet null of leeg zijn");
+    
+        if (string.IsNullOrWhiteSpace(passwordHash)) return Result<AppUser>.Failure("paswoordhash kan niet leeg of null zijn");
+        var user = new AppUser
         {
-            ConflictExeption ex => (409, ex.Message),
-            NotFoundException ex => (404, ex.Message),
-            _ => (500, "An unexpected error occurred.")
+            UserName = userName,
+            PasswordHash = passwordHash,
+            IsPersonalAccount = IsPersonalAccount
+        };
+        return Result<AppUser>.Success(user);
+    }
+
+    public void GenerateRefreshToken()
+    {
+        var randomNumber = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomNumber);
+        RefreshToken = Convert.ToBase64String(randomNumber);
+        RefreshTokenValidUntil = DateTime.UtcNow.AddDays(30);
+    }
+
+
+    
+}=== Employee.cs ===
+using WZCNet.src.Domain.Common;
+using WZCNet.src.Domain.ValueObjects;
+
+
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+public class Employee : BaseEntity
+{
+    public string FirstName { get; private set; }
+    public string LastName { get; private set; }
+    public DateOnly DateOfBirth { get; set; }
+
+    // navigation Property
+
+    public EmployeeAuthentication? Pin { get; set; }
+
+    public ICollection<EmployeeAddress> Addresses { get; private set; } = [];
+    public ICollection<EmployeeContact> EmployeeContacts { get; private set; } = [];
+    public ICollection<EmployeeEmploymentHistory> EmploymentHistories { get; private set; } = [];
+
+    public ICollection<EmployeeComment> CommentsAuthored { get; set; } = [];
+    public ICollection<EmployeeComment> CommentsRecieved { get; set; } = [];
+    public ICollection<EmployeePermission> PersonalPermissions { get; set; } = [];
+    public ICollection<AppUser> AppUsers {get;set;}=[];
+
+    private Employee() { }
+    public static Result<Employee> Create(string firstName, string lastName, DateOnly dateOfBirth, string pinHash, IEnumerable<EmployeeAddress> addresses)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(firstName, nameof(firstName));
+        ArgumentException.ThrowIfNullOrEmpty(lastName, nameof(lastName));
+        ArgumentException.ThrowIfNullOrWhiteSpace(pinHash, nameof(pinHash));
+
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var youngestAllowed = today.AddYears(-16);
+        var oldestAllowed = today.AddYears(-120);
+
+        if (dateOfBirth == default)
+            return Result<Employee>.Failure("Ongeldige geboortedatum.");
+
+        if (dateOfBirth < oldestAllowed || dateOfBirth > today)
+            return Result<Employee>.Failure("Geboortedatum moet binnen de laatste 120 jaar liggen.");
+
+        if (dateOfBirth > youngestAllowed)
+            return Result<Employee>.Failure("Werknemer moet minstens 16 jaar oud zijn.");
+
+        var nameResult = Name.Create(firstName, lastName);
+        if (!nameResult.IsSuccess) return Result<Employee>.Failure(nameResult.Error);
+
+        if (!addresses.Any()) return Result<Employee>.Failure("Een werknemer moet minstens één adres hebben.");
+
+        var employee = new Employee
+        {
+          
+            FirstName = nameResult.Value.First,
+            LastName = nameResult.Value.Last,
+            DateOfBirth = dateOfBirth,
+            Pin = EmployeeAuthentication.Create(pinHash),
+            Addresses = [.. addresses]
         };
 
-        context.Response.StatusCode = statusCode;
-        context.Response.ContentType = "application/problem+json";
+        return Result<Employee>.Success(employee);
+    }
+    
+    //TODO Add methods to manage contacts
 
-        await context.Response.WriteAsJsonAsync(new
+    //TODO Add methods to manage employmentHistory and jobtitles
+
+
+}
+=== UserService ===
+using System;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Identity;
+using WZCNet.src.Application.DTOs;
+using WZCNet.src.Application.DTOs.Requests.Auth;
+using WZCNet.src.Application.DTOs.Responses;
+using WZCNet.src.Application.Interfaces;
+using WZCNet.src.Application.Interfaces.Repositories;
+using WZCNet.src.Domain.Common;
+using WZCNet.src.Domain.Entities;
+using WZCNet.src.Domain.Interfaces;
+
+namespace WZCNet.src.Application.Services;
+
+public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenService _ts) : IUserService
+{
+    public string HashPassword(string password)
+    {
+        var passwordHasher = new PasswordHasher<AppUser>();
+        return passwordHasher.HashPassword(null,password);
+    }
+
+    public async Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto)
+    {
+        //TODO obscure the response on username/password error
+        var user = await repo.GetAppuserByUserName(requestDto.UserName);
+        if(user == null) return Result<LoginResponseDto>.Failure("Gebruiker bestaat niet");
+        //check the password
+        var passwordHasher = new PasswordHasher<AppUser>();
+        if(passwordHasher.VerifyHashedPassword(user,user.PasswordHash,requestDto.Password) == PasswordVerificationResult.Failed) return Result<LoginResponseDto>.Failure("Ongeldig wachtwoord");
+        user.LastLogin = DateTime.UtcNow;
+        // create Jwt
+        var ts = new TokenClaimsDTO {
+                UserName = user.UserName
+            };
+        string token = await _ts.CreateBearerToken(ts);
+        //create a refreshtoken
+        if(user.RefreshToken == null)
         {
-            status = statusCode,
-            title = message
-        });
-    });
-});
-app.Run();
+            //generate a token
+            user.GenerateRefreshToken();
+
+        }
+        await db_actions.SaveChangesAsync();
+
+        return Result<LoginResponseDto>.Success(new LoginResponseDto{AccessToken=token,RefreshToken=user.RefreshToken});
+    }
+
+    public async Task<Result<AppUser>> Register(LoginRequestDto request)
+    {
+        // check for duplicate
+        if(await repo.UserExists(request.UserName)) return Result<AppUser>.Failure("gebruiker bestaat al");
+        var user = AppUser.Create(request.UserName,HashPassword(request.Password),request.IsPersonalAccount ?? false);
+        if(!user.IsSuccess) return user;
+
+        // save to the database
+        await repo.AddUserToDatabase(user.Value);
+        await db_actions.SaveChangesAsync();
+        return user;
+
+    }
+
+
+    public bool VerifyPassword(string userName, string password)
+    {
+        throw new NotImplementedException();
+    }
+}

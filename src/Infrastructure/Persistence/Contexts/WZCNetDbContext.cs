@@ -97,12 +97,22 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbCont
         });
         modelBuilder.Entity<AppUser>(entity =>
         {
+            entity.OwnsMany(a => a.Refreshtokens, RefreshtokenBuilder =>
+            {
+                RefreshtokenBuilder.WithOwner(t=>t.AppUser);
+                RefreshtokenBuilder.OwnsOne(r => r.Device, deviceBuilder =>
+                {
+                    deviceBuilder.Property(d=>d.DeviceInfo).IsRequired(false);
+                    deviceBuilder.Property(d=>d.IpAddress).IsRequired(false);
+                });
+            });
             entity.HasMany(a => a.Employees).WithMany(e => e.AppUsers).UsingEntity<AppUserEmployee>(je =>
             {
                 je.HasOne(j=>j.AppUser).WithMany().HasForeignKey(j=>j.AppUsersId).OnDelete(DeleteBehavior.Cascade);
                 je.HasOne(j=>j.Employee).WithMany().HasForeignKey(j=>j.EmployeeId).OnDelete(DeleteBehavior.Cascade);
             });
         });
+       
 
         modelBuilder.Entity<Room>(entity =>
         {

@@ -11,4 +11,5 @@ public interface IUserRepository
     Task<bool> UserExists(string userName);
 
     Task<AppUser?> GetAppuserByUserName(string userName);
+    Task<AppUser?> GetAppUserByIdAsync(int id);
 }

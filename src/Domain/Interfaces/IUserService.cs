@@ -1,5 +1,6 @@
 using System;
 using WZCNet.src.Application.DTOs.Requests.Auth;
+using WZCNet.src.Application.DTOs.Responses;
 using WZCNet.src.Domain.Common;
 using WZCNet.src.Domain.Entities;
 
@@ -9,7 +10,11 @@ public interface IUserService
 {
     Task<Result<AppUser>> Register(LoginRequestDto request);
 
-    Task<Result<string>> Login(LoginRequestDto requestDto);
+    Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto);
+    
+    //Task<Result<LoginResponseDto>> Refresh(RefreshRequestDto request);
+    
     string HashPassword(string password);
-    bool VerifyPassword(string userName, string password);
+
+
 }

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WZCNet.src.Application.DTOs.Requests.Auth;
+using WZCNet.src.Application.DTOs.Responses;
 using WZCNet.src.Application.Interfaces;
 using WZCNet.src.Domain.Entities;
 using WZCNet.src.Domain.Interfaces;
@@ -22,23 +23,21 @@ namespace WZCNet.src.Api.Controllers
         }
         
         [HttpPost("login")]
-        public async Task<ActionResult<string>> Login(LoginRequestDto request)
+        public async Task<ActionResult<LoginResponseDto>> Login(LoginRequestDto request)
         {
             var r = await us.Login(request);
             if(!r.IsSuccess) return BadRequest(r.Error);
-
-            //if(user.UserName != request.UserName) return BadRequest("user not found");
-            //if(new PasswordHasher<AppUser>().VerifyHashedPassword(user,user.PasswordHash,request.Password) == PasswordVerificationResult.Failed)
-            // {
-            //    return BadRequest("Wrong Password");
-            //}
-            //var ts = new TokenClaimsDTO {
-            //    UserName = user.UserName
-            //};
-            //string token = await _ts.CreateBearerToken(ts);
             return Ok(r.Value);
         }
-        
+        /*
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh(RefreshRequestDto request)
+        {
+            var r = await us.Refresh(request);
+            if(!r.IsSuccess) return BadRequest(r.Error);
+            return Ok(r.Value);
+        }
+        */
         [Authorize]
         [HttpGet]
         public ActionResult<string> Test()

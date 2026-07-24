@@ -4,10 +4,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace WZCNet.src.Infrastructure.Persistence.Migrations
+namespace WZCNet.Migrations
 {
     /// <inheritdoc />
-    public partial class SO : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -25,8 +25,6 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                     NumberOfFailedLoginAttempts = table.Column<int>(type: "integer", nullable: false),
                     LastLogin = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     PasswordLastChangedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    RefreshToken = table.Column<string>(type: "text", nullable: true),
-                    RefreshTokenValidUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -151,6 +149,32 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ServiceOrderStatus", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Refreshtoken",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RefreshToken = table.Column<string>(type: "text", nullable: false),
+                    ValidUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Device_DeviceInfo = table.Column<string>(type: "text", nullable: true),
+                    Device_IpAddress = table.Column<string>(type: "text", nullable: true),
+                    AppUserId = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Refreshtoken", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Refreshtoken_AppUsers_AppUserId",
+                        column: x => x.AppUserId,
+                        principalTable: "AppUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -608,6 +632,11 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                 filter: "\"DeletedAt\" IS NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Refreshtoken_AppUserId",
+                table: "Refreshtoken",
+                column: "AppUserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Rooms_DepartmentId",
                 table: "Rooms",
                 column: "DepartmentId");
@@ -675,10 +704,10 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                 name: "JobTitlePermissions");
 
             migrationBuilder.DropTable(
-                name: "ServiceOrderComment");
+                name: "Refreshtoken");
 
             migrationBuilder.DropTable(
-                name: "AppUsers");
+                name: "ServiceOrderComment");
 
             migrationBuilder.DropTable(
                 name: "ContactTypes");
@@ -691,6 +720,9 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "Permissions");
+
+            migrationBuilder.DropTable(
+                name: "AppUsers");
 
             migrationBuilder.DropTable(
                 name: "ServiceOrder");
