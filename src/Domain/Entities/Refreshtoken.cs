@@ -15,7 +15,7 @@ public class Refreshtoken: BaseEntity
     public AppUser AppUser {get;private set;}
     public Employee? Employee {get;private set;}
 
-    public static Refreshtoken CreateRefreshtoken(int userId, SessionInfo info, int? employeeId)
+    public static Refreshtoken Create(int userId, SessionInfo info, int? employeeId)
     {
         var randomNumber = new byte[32];
         using var rng = RandomNumberGenerator.Create();

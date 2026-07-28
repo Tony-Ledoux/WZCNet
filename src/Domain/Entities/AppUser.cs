@@ -46,25 +46,4 @@ public class AppUser : BaseEntity
     }
 
 
-    public Refreshtoken AddRefreshToken(SessionInfo session,int? employeeId)
-    {
-        var rf = Refreshtoken.CreateRefreshtoken(Id,session,employeeId);
-        Refreshtokens.Add(rf);
-        return rf;
-    }
-
-    public Refreshtoken? GetRefreshtokenByDeviceInfoAndEmployeeId(SessionInfo session, int? employeeId)
-    {
-        if (Refreshtokens == null || Refreshtokens.Count == 0) return null;
-        return Refreshtokens.FirstOrDefault(t=>t.EmployeeId == employeeId && t.Device.IpAddress == session.IpAddress && t.Device.DeviceInfo == session.DeviceInfo);
-    }
-
-    public Employee? GetEmployeeById(int? id = null)
-    {
-        if(Employees.Count == 0) return null;
-        if(IsPersonalAccount && Employees.Count == 1) return Employees.First();
-        return Employees.FirstOrDefault(e=>e.Id == id);
-
-    }
-
 }

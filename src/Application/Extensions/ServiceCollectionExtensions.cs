@@ -12,8 +12,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IUserService,UserService>();
         services.AddScoped<IUnitOfWork,UnitOfWork>();
-        services.AddScoped<IUserRepository,UserRepository>();
-        services.AddScoped<IRefreshtokenRepository,RefreshTokenRepository>();
+        services.AddScoped<IUserAccountRepository,UserAccountRepository>();
+        
 
         return services;
     }
