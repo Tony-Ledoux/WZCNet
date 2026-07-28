@@ -9,10 +9,7 @@ namespace WZCNet.src.Infrastructure.Persistence.Repositories;
 
 public class UserRepository(WZCNetDbContext context) : IUserRepository
 {
-    public async Task AddUserToDatabase(AppUser user)
-    {
-        context.AppUsers.Add(user);
-    }
+ 
 
     public async Task<AppUser?> GetAppuserByUserName(string userName)
     {
@@ -27,7 +24,7 @@ public class UserRepository(WZCNetDbContext context) : IUserRepository
     public async Task<AppUser?> GetAppUserByIdAsync(int id)
     {
         // get user by Id 
-        return await context.AppUsers.FindAsync(id);
+        return await context.AppUsers.Include(u=>u.Refreshtokens).FirstOrDefaultAsync(u=>u.Id == id);
     }
 
 }

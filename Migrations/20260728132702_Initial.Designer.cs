@@ -9,11 +9,11 @@ using WZCNet.src.Infrastructure.Persistence.Contexts;
 
 #nullable disable
 
-namespace WZCNet.src.Infrastructure.Persistence.Migrations
+namespace WZCNet.Migrations
 {
     [DbContext(typeof(WZCNetDbContext))]
-    [Migration("20260724195825_SO")]
-    partial class SO
+    [Migration("20260728132702_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -524,6 +524,45 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                     b.ToTable("Permissions");
                 });
 
+            modelBuilder.Entity("WZCNet.src.Domain.Entities.Refreshtoken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AppUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("EmployeeId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ValidUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppUserId");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("Refreshtokens");
+                });
+
             modelBuilder.Entity("WZCNet.src.Domain.Entities.Room", b =>
                 {
                     b.Property<int>("Id")
@@ -668,83 +707,6 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                         .HasFilter("\"DeletedAt\" IS NULL");
 
                     b.ToTable("ServiceOrderStatus");
-                });
-
-            modelBuilder.Entity("WZCNet.src.Domain.Entities.AppUser", b =>
-                {
-                    b.OwnsMany("WZCNet.src.Domain.Entities.Refreshtoken", "Refreshtokens", b1 =>
-                        {
-                            b1.Property<int>("Id")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("integer");
-
-                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
-
-                            b1.Property<int>("AppUserId")
-                                .HasColumnType("integer");
-
-                            b1.Property<DateTime>("CreatedAt")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<DateTime?>("DeletedAt")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<int?>("EmployeeId")
-                                .HasColumnType("integer");
-
-                            b1.Property<string>("RefreshToken")
-                                .IsRequired()
-                                .HasColumnType("text");
-
-                            b1.Property<DateTime?>("UpdatedAt")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<DateTime>("ValidUntil")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.HasKey("Id");
-
-                            b1.HasIndex("AppUserId");
-
-                            b1.HasIndex("EmployeeId");
-
-                            b1.ToTable("Refreshtoken");
-
-                            b1.WithOwner("AppUser")
-                                .HasForeignKey("AppUserId");
-
-                            b1.HasOne("WZCNet.src.Domain.Entities.EmployeeAggregate.Employee", "Employee")
-                                .WithMany()
-                                .HasForeignKey("EmployeeId");
-
-                            b1.OwnsOne("WZCNet.src.Domain.ValueObjects.SessionInfo", "Device", b2 =>
-                                {
-                                    b2.Property<int>("RefreshtokenId")
-                                        .HasColumnType("integer");
-
-                                    b2.Property<string>("DeviceInfo")
-                                        .HasColumnType("text");
-
-                                    b2.Property<string>("IpAddress")
-                                        .HasColumnType("text");
-
-                                    b2.HasKey("RefreshtokenId");
-
-                                    b2.ToTable("Refreshtoken");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("RefreshtokenId");
-                                });
-
-                            b1.Navigation("AppUser");
-
-                            b1.Navigation("Device")
-                                .IsRequired();
-
-                            b1.Navigation("Employee");
-                        });
-
-                    b.Navigation("Refreshtokens");
                 });
 
             modelBuilder.Entity("WZCNet.src.Domain.Entities.AppUserEmployee", b =>
@@ -958,6 +920,45 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                     b.Navigation("Permission");
                 });
 
+            modelBuilder.Entity("WZCNet.src.Domain.Entities.Refreshtoken", b =>
+                {
+                    b.HasOne("WZCNet.src.Domain.Entities.AppUser", "AppUser")
+                        .WithMany("Refreshtokens")
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WZCNet.src.Domain.Entities.EmployeeAggregate.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId");
+
+                    b.OwnsOne("WZCNet.src.Domain.ValueObjects.SessionInfo", "Device", b1 =>
+                        {
+                            b1.Property<int>("RefreshtokenId")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("DeviceInfo")
+                                .HasColumnType("text");
+
+                            b1.Property<string>("IpAddress")
+                                .HasColumnType("text");
+
+                            b1.HasKey("RefreshtokenId");
+
+                            b1.ToTable("Refreshtokens");
+
+                            b1.WithOwner()
+                                .HasForeignKey("RefreshtokenId");
+                        });
+
+                    b.Navigation("AppUser");
+
+                    b.Navigation("Device")
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("WZCNet.src.Domain.Entities.Room", b =>
                 {
                     b.HasOne("WZCNet.src.Domain.Entities.Department", "Department")
@@ -1019,6 +1020,11 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("ServiceOrder");
+                });
+
+            modelBuilder.Entity("WZCNet.src.Domain.Entities.AppUser", b =>
+                {
+                    b.Navigation("Refreshtokens");
                 });
 
             modelBuilder.Entity("WZCNet.src.Domain.Entities.EmployeeAggregate.Employee", b =>

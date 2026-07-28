@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService,UserService>();
         services.AddScoped<IUnitOfWork,UnitOfWork>();
         services.AddScoped<IUserRepository,UserRepository>();
+        services.AddScoped<IRefreshtokenRepository,RefreshTokenRepository>();
 
         return services;
     }

@@ -20,6 +20,7 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbCont
     public DbSet<JobTitle> JobTitles { get; set; }
     public DbSet<EmployeeComment> EmployeeComments {get;set;}
     public DbSet<AppUser> AppUsers {get;set;}
+    public DbSet<Refreshtoken> Refreshtokens {get;set;}
     public DbSet<Floor> Floors {get;set;}
     public DbSet<Department> Departments {get;set;}
     public DbSet<Room> Rooms {get;set;}
@@ -28,6 +29,7 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbCont
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(WZCNetDbContext).Assembly);
         // Employee 
         modelBuilder.Entity<Employee>(entity =>
         {
@@ -95,23 +97,7 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbCont
             entity.Property(ec=>ec.AuthorJobTitleSnapshot).IsRequired();
             entity.Property(ec=>ec.RecipientJobTitleSnapshot).IsRequired();
         });
-        modelBuilder.Entity<AppUser>(entity =>
-        {
-            entity.OwnsMany(a => a.Refreshtokens, RefreshtokenBuilder =>
-            {
-                RefreshtokenBuilder.WithOwner(t=>t.AppUser);
-                RefreshtokenBuilder.OwnsOne(r => r.Device, deviceBuilder =>
-                {
-                    deviceBuilder.Property(d=>d.DeviceInfo).IsRequired(false);
-                    deviceBuilder.Property(d=>d.IpAddress).IsRequired(false);
-                });
-            });
-            entity.HasMany(a => a.Employees).WithMany(e => e.AppUsers).UsingEntity<AppUserEmployee>(je =>
-            {
-                je.HasOne(j=>j.AppUser).WithMany().HasForeignKey(j=>j.AppUsersId).OnDelete(DeleteBehavior.Cascade);
-                je.HasOne(j=>j.Employee).WithMany().HasForeignKey(j=>j.EmployeeId).OnDelete(DeleteBehavior.Cascade);
-            });
-        });
+      
        
 
         modelBuilder.Entity<Room>(entity =>

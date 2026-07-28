@@ -29,7 +29,7 @@ public class Refreshtoken: BaseEntity
             EmployeeId = employeeId
         };
     }
-    public bool IsValid() => DeletedAt == null && DateTime.UtcNow >= ValidUntil; 
+    public bool IsValid() => DeletedAt == null && DateTime.UtcNow < ValidUntil; 
 
     public void Invalidate()
     {

@@ -45,18 +45,6 @@ public class AppUser : BaseEntity
         NumberOfFailedLoginAttempts++;
     }
 
-    public void InvalidateExistingRefreshTokens(SessionInfo sessionInfo)
-    {
-        if (Refreshtokens == null || Refreshtokens.Count == 0) return;
-        var existingTokens = Refreshtokens.Where(rt =>
-            rt.Device?.DeviceInfo == sessionInfo.DeviceInfo &&
-            rt.Device?.IpAddress == sessionInfo.IpAddress &&
-            rt.DeletedAt == null).ToList();
-        foreach (var tokenToInvalidate in existingTokens)
-        {
-            tokenToInvalidate.Invalidate();
-        }
-    }
 
     public Refreshtoken AddRefreshToken(SessionInfo session,int? employeeId)
     {
@@ -78,11 +66,5 @@ public class AppUser : BaseEntity
         return Employees.FirstOrDefault(e=>e.Id == id);
 
     }
-
-    public Refreshtoken? GetRefreshtokenByTokenString(string token)
-    {
-        return Refreshtokens.FirstOrDefault(t=>t.RefreshToken == token);
-    }
-
 
 }

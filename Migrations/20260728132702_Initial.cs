@@ -4,10 +4,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace WZCNet.src.Infrastructure.Persistence.Migrations
+namespace WZCNet.Migrations
 {
     /// <inheritdoc />
-    public partial class SO : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -262,7 +262,7 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Refreshtoken",
+                name: "Refreshtokens",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -279,15 +279,15 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Refreshtoken", x => x.Id);
+                    table.PrimaryKey("PK_Refreshtokens", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Refreshtoken_AppUsers_AppUserId",
+                        name: "FK_Refreshtokens_AppUsers_AppUserId",
                         column: x => x.AppUserId,
                         principalTable: "AppUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Refreshtoken_Employees_EmployeeId",
+                        name: "FK_Refreshtokens_Employees_EmployeeId",
                         column: x => x.EmployeeId,
                         principalTable: "Employees",
                         principalColumn: "Id");
@@ -638,13 +638,13 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                 filter: "\"DeletedAt\" IS NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Refreshtoken_AppUserId",
-                table: "Refreshtoken",
+                name: "IX_Refreshtokens_AppUserId",
+                table: "Refreshtokens",
                 column: "AppUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Refreshtoken_EmployeeId",
-                table: "Refreshtoken",
+                name: "IX_Refreshtokens_EmployeeId",
+                table: "Refreshtokens",
                 column: "EmployeeId");
 
             migrationBuilder.CreateIndex(
@@ -715,7 +715,7 @@ namespace WZCNet.src.Infrastructure.Persistence.Migrations
                 name: "JobTitlePermissions");
 
             migrationBuilder.DropTable(
-                name: "Refreshtoken");
+                name: "Refreshtokens");
 
             migrationBuilder.DropTable(
                 name: "ServiceOrderComment");

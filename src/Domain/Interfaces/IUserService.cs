@@ -12,7 +12,7 @@ public interface IUserService
 
     Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto);
     
-    Task<Result<AppUser>> Refresh(RefreshRequestDto request);
+    Task<Result<LoginResponseDto>> Refresh(RefreshRequestDto request);
     
     string HashPassword(string password);
 

@@ -13,13 +13,15 @@ using WZCNet.src.Domain.ValueObjects;
 namespace WZCNet.src.Application.Services;
 
 public class UserService(
-    IUserRepository repo,
+    IUserRepository userrepo,
+    IRefreshtokenRepository rfrepo,
     IUnitOfWork dbActions,
     ITokenService _ts,
     IRequestContext rc,
     IPasswordHasher<AppUser> _passwordHasher
     ) : IUserService
 {
+
     public string HashPassword(string password)
     {
         return _passwordHasher.HashPassword(null,password);
@@ -49,7 +51,8 @@ public class UserService(
     public async Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto)
     {
         //TODO obscure the response on username/password error
-        var user = await repo.GetAppuserByUserName(requestDto.UserName);
+        //TODO Fix logic to use refreshtokenrepository
+        var user = await userrepo.GetAppuserByUserName(requestDto.UserName);
         if(user == null) return Result<LoginResponseDto>.Failure("Gebruiker bestaat niet");
         if(!user.IsActive) return Result<LoginResponseDto>.Failure("Account is geblokkeerd");
         //check the password
@@ -71,26 +74,29 @@ public class UserService(
     }
 
 
-    public async Task<Result<AppUser>> Refresh(RefreshRequestDto request)
+    public async Task<Result<LoginResponseDto>> Refresh(RefreshRequestDto request)
     {
-        var user = await repo.GetAppUserByIdAsync(request.AccountId);
-        if(user == null) return Result<AppUser>.Failure("Geen gekende gebruiker");
-        //check if refreshtoken is valid
-        var token = user.GetRefreshtokenByTokenString(request.RefreshToken);
-        if(token == null) return Result<AppUser>.Failure("Token niet gevonden");
-        if(!token.IsValid())return Result<AppUser>.Failure("Token is vervallen");
-        return Result<AppUser>.Success(user);
+        var token = await rfrepo.GetRefreshtokenByTokenStringAsync(request.RefreshToken);
+        if(token == null) return Result<LoginResponseDto>.Failure("Geen token gevonden");
+        if(!token.IsValid())return Result<LoginResponseDto>.Failure("Token is vervallen");
+        if(token.AppUserId != request.AccountId) return Result<LoginResponseDto>.Failure("Token is niet van deze gebruiker");
+        var response = new LoginResponseDto
+        {
+            AccessToken = await CreateJWT(token.AppUser,token.Employee),
+            RefreshToken = "must revalidate"
+        };
+        return Result<LoginResponseDto>.Success(response);
     }
 
     public async Task<Result<AppUser>> Register(LoginRequestDto request)
     {
         // check for duplicate
-        if(await repo.UserExists(request.UserName)) return Result<AppUser>.Failure("gebruiker bestaat al");
+        if(await userrepo.UserExists(request.UserName)) return Result<AppUser>.Failure("gebruiker bestaat al");
         var user = AppUser.Create(request.UserName,HashPassword(request.Password),request.IsPersonalAccount ?? false);
         if(!user.IsSuccess) return user;
 
         // save to the database
-        await repo.AddUserToDatabase(user.Value);
+        dbActions.Add(user.Value);
         await dbActions.SaveChangesAsync();
         return user;
 
