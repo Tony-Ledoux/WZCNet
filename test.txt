@@ -1,187 +1,178 @@
-=== AppUser.cs ===
-using System.Security.Cryptography;
-using WZCNet.src.Domain.Common;
-using WZCNet.src.Domain.Entities.EmployeeAggregate;
+==Context==
 
-namespace WZCNet.src.Domain.Entities;
-public class AppUser: BaseEntity
-{
-    public string UserName {get;set;}
-    public string PasswordHash {get;set;}
-    public bool IsPersonalAccount {get;set;}
-    public bool IsActive {get;set;} = true;
-    public int NumberOfFailedLoginAttempts {get;set;}
-    public DateTime? LastLogin {get;set;}
-    public DateTime? PasswordLastChangedAt {get;set;}
-    public string? RefreshToken {get;set;}
-    public DateTime? RefreshTokenValidUntil {get;set;}
-
-    public ICollection<Employee> Employees {get;set;}=[];
-
-    private AppUser(){}
-    public static Result<AppUser> Create(string userName,string passwordHash, bool IsPersonalAccount = false)
-    {
-        // Validate required parameters
-        if (string.IsNullOrWhiteSpace(userName)) return Result<AppUser>.Failure("username kan niet null of leeg zijn");
-    
-        if (string.IsNullOrWhiteSpace(passwordHash)) return Result<AppUser>.Failure("paswoordhash kan niet leeg of null zijn");
-        var user = new AppUser
-        {
-            UserName = userName,
-            PasswordHash = passwordHash,
-            IsPersonalAccount = IsPersonalAccount
-        };
-        return Result<AppUser>.Success(user);
-    }
-
-    public void GenerateRefreshToken()
-    {
-        var randomNumber = new byte[32];
-        using var rng = RandomNumberGenerator.Create();
-        rng.GetBytes(randomNumber);
-        RefreshToken = Convert.ToBase64String(randomNumber);
-        RefreshTokenValidUntil = DateTime.UtcNow.AddDays(30);
-    }
-
-
-    
-}=== Employee.cs ===
-using WZCNet.src.Domain.Common;
-using WZCNet.src.Domain.ValueObjects;
-
-
-namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-public class Employee : BaseEntity
-{
-    public string FirstName { get; private set; }
-    public string LastName { get; private set; }
-    public DateOnly DateOfBirth { get; set; }
-
-    // navigation Property
-
-    public EmployeeAuthentication? Pin { get; set; }
-
-    public ICollection<EmployeeAddress> Addresses { get; private set; } = [];
-    public ICollection<EmployeeContact> EmployeeContacts { get; private set; } = [];
-    public ICollection<EmployeeEmploymentHistory> EmploymentHistories { get; private set; } = [];
-
-    public ICollection<EmployeeComment> CommentsAuthored { get; set; } = [];
-    public ICollection<EmployeeComment> CommentsRecieved { get; set; } = [];
-    public ICollection<EmployeePermission> PersonalPermissions { get; set; } = [];
-    public ICollection<AppUser> AppUsers {get;set;}=[];
-
-    private Employee() { }
-    public static Result<Employee> Create(string firstName, string lastName, DateOnly dateOfBirth, string pinHash, IEnumerable<EmployeeAddress> addresses)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(firstName, nameof(firstName));
-        ArgumentException.ThrowIfNullOrEmpty(lastName, nameof(lastName));
-        ArgumentException.ThrowIfNullOrWhiteSpace(pinHash, nameof(pinHash));
-
-
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var youngestAllowed = today.AddYears(-16);
-        var oldestAllowed = today.AddYears(-120);
-
-        if (dateOfBirth == default)
-            return Result<Employee>.Failure("Ongeldige geboortedatum.");
-
-        if (dateOfBirth < oldestAllowed || dateOfBirth > today)
-            return Result<Employee>.Failure("Geboortedatum moet binnen de laatste 120 jaar liggen.");
-
-        if (dateOfBirth > youngestAllowed)
-            return Result<Employee>.Failure("Werknemer moet minstens 16 jaar oud zijn.");
-
-        var nameResult = Name.Create(firstName, lastName);
-        if (!nameResult.IsSuccess) return Result<Employee>.Failure(nameResult.Error);
-
-        if (!addresses.Any()) return Result<Employee>.Failure("Een werknemer moet minstens één adres hebben.");
-
-        var employee = new Employee
-        {
-          
-            FirstName = nameResult.Value.First,
-            LastName = nameResult.Value.Last,
-            DateOfBirth = dateOfBirth,
-            Pin = EmployeeAuthentication.Create(pinHash),
-            Addresses = [.. addresses]
-        };
-
-        return Result<Employee>.Success(employee);
-    }
-    
-    //TODO Add methods to manage contacts
-
-    //TODO Add methods to manage employmentHistory and jobtitles
-
-
-}
-=== UserService ===
-using System;
-using System.Security.Cryptography;
-using Microsoft.AspNetCore.Identity;
-using WZCNet.src.Application.DTOs;
-using WZCNet.src.Application.DTOs.Requests.Auth;
-using WZCNet.src.Application.DTOs.Responses;
-using WZCNet.src.Application.Interfaces;
-using WZCNet.src.Application.Interfaces.Repositories;
-using WZCNet.src.Domain.Common;
-using WZCNet.src.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 using WZCNet.src.Domain.Interfaces;
+using WZCNet.src.Domain.Entities;
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
+using WZCNet.src.Domain.Entities.ServiceOrderAggregate;
 
-namespace WZCNet.src.Application.Services;
 
-public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenService _ts) : IUserService
+namespace WZCNet.src.Infrastructure.Persistence.Contexts;
+
+public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbContext(options)
 {
-    public string HashPassword(string password)
-    {
-        var passwordHasher = new PasswordHasher<AppUser>();
-        return passwordHasher.HashPassword(null,password);
-    }
+    public DbSet<Employee> Employees { get; set; }
+    public DbSet<EmployeeAddress> EmployeeAddresses {get;set;}
+    public DbSet<ContactType> ContactTypes { get; set; }
+    public DbSet<EmployeeContact> EmployeeContacts { get; set; }
+    public DbSet<EmployeeEmploymentHistory> EmploymentHistories { get; set; }
+    public DbSet<EmployeeEmploymentHistoryJobTitleAssignment> EmployeeEmploymentHistoryJobTitleAssignments {get;set;}
+    public DbSet<Permission> Permissions { get; set; }
+    public DbSet<JobTitle> JobTitles { get; set; }
+    public DbSet<EmployeeComment> EmployeeComments {get;set;}
+    public DbSet<AppUser> AppUsers {get;set;}
+    public DbSet<Floor> Floors {get;set;}
+    public DbSet<Department> Departments {get;set;}
+    public DbSet<Room> Rooms {get;set;}
 
-    public async Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto)
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        //TODO obscure the response on username/password error
-        var user = await repo.GetAppuserByUserName(requestDto.UserName);
-        if(user == null) return Result<LoginResponseDto>.Failure("Gebruiker bestaat niet");
-        //check the password
-        var passwordHasher = new PasswordHasher<AppUser>();
-        if(passwordHasher.VerifyHashedPassword(user,user.PasswordHash,requestDto.Password) == PasswordVerificationResult.Failed) return Result<LoginResponseDto>.Failure("Ongeldig wachtwoord");
-        user.LastLogin = DateTime.UtcNow;
-        // create Jwt
-        var ts = new TokenClaimsDTO {
-                UserName = user.UserName
-            };
-        string token = await _ts.CreateBearerToken(ts);
-        //create a refreshtoken
-        if(user.RefreshToken == null)
+        base.OnModelCreating(modelBuilder);
+        // Employee 
+        modelBuilder.Entity<Employee>(entity =>
         {
-            //generate a token
-            user.GenerateRefreshToken();
+            entity.OwnsOne(e => e.Pin, pinBuilder =>
+            {
+                pinBuilder.Property(p=>p.PinHash).IsRequired();
+                pinBuilder.Property(p=>p.PinChangedAt).IsRequired(false);
+                pinBuilder.Property(p=>p.PinLastUsedAt).IsRequired(false);
+            });
+            entity.OwnsMany(e=>e.EmployeeContacts, contactBuilder =>
+            {
+                contactBuilder.HasOne(ec=>ec.ContactType).WithMany().HasForeignKey(ec=>ec.ContactTypeId).OnDelete(DeleteBehavior.Restrict);
+            });
+            entity.HasMany(e=>e.EmploymentHistories).WithOne(eh=>eh.Employee).HasForeignKey(eh=>eh.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.FirstName,e.LastName, e.DateOfBirth }).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+        });
+        modelBuilder.Entity<EmployeeAddress>(entity =>
+        {
+            entity.HasOne(e=>e.Employee).WithMany(em=>em.Addresses).HasForeignKey(e=>e.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ContactType>(entity =>
+        {
+            entity.HasIndex(ct=>ct.TypeOfContact).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+        });
+        //employmenthistory
+        modelBuilder.Entity<EmployeeEmploymentHistory>(entity =>
+        {
+            entity.HasOne(eh=>eh.Employee).WithMany(e=>e.EmploymentHistories).HasForeignKey(eh=>eh.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(eh=>eh.JobTitleAssignments).WithOne(jta=>jta.EmploymentHistory).HasForeignKey(jta=>jta.EmploymentHistoryId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<EmployeeEmploymentHistoryJobTitleAssignment>(entity =>
+        {
+            entity.HasOne(ehjta=>ehjta.EmploymentHistory).WithMany(eh=>eh.JobTitleAssignments).HasForeignKey(ehjta=>ehjta.EmploymentHistoryId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(ehjta=>ehjta.JobTitle).WithMany().HasForeignKey(ehjta=>ehjta.JobTitleId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(ehjta=>ehjta.Department).WithMany().HasForeignKey(ehjta=>ehjta.PrincipalDepartmentId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<JobTitle>(entity =>
+        {
+           entity.HasIndex(jt=>jt.JobTitleString).IsUnique().HasFilter("\"DeletedAt\" IS NULL"); 
+        });
 
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.HasIndex(p=>p.PermissionString).IsUnique().HasFilter("\"DeletedAt\" IS NULL"); 
+        });
+
+        modelBuilder.Entity<EmployeePermission>(entity =>
+        {
+            entity.HasOne(ep=>ep.Employee).WithMany(e=>e.PersonalPermissions).HasForeignKey(ep=>ep.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(ep=>ep.Permission).WithMany().HasForeignKey(ep=>ep.PermissionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(ep=> new{ep.EmployeeId,ep.PermissionId});
+        });
+
+        modelBuilder.Entity<JobTitlePermissions>(entity =>
+        {
+            entity.HasOne(jtpm=>jtpm.Permission).WithMany().HasForeignKey(jtpm=>jtpm.PermissionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(jtpm=>jtpm.JobTitle).WithMany(jt=>jt.JobTitlePermissions).HasForeignKey(jtpm=>jtpm.JobTitleId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EmployeeComment>(entity => 
+        {
+            entity.HasOne(ec=>ec.Author).WithMany(e=>e.CommentsAuthored).HasForeignKey(ec=>ec.CreatedByEmployeeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(ec=>ec.Recipient).WithMany(e=>e.CommentsRecieved).HasForeignKey(ec=>ec.CreatedForEmployeeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(ec=>ec.EmploymentHistory).WithMany().HasForeignKey(ec=>ec.CreatedDuringEmploymentId).OnDelete(DeleteBehavior.Restrict);
+            entity.Property(ec=>ec.AuthorJobTitleSnapshot).IsRequired();
+            entity.Property(ec=>ec.RecipientJobTitleSnapshot).IsRequired();
+        });
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.OwnsMany(a => a.Refreshtokens, RefreshtokenBuilder =>
+            {
+                RefreshtokenBuilder.WithOwner(t=>t.AppUser);
+                RefreshtokenBuilder.OwnsOne(r => r.Device, deviceBuilder =>
+                {
+                    deviceBuilder.Property(d=>d.DeviceInfo).IsRequired(false);
+                    deviceBuilder.Property(d=>d.IpAddress).IsRequired(false);
+                });
+            });
+            entity.HasMany(a => a.Employees).WithMany(e => e.AppUsers).UsingEntity<AppUserEmployee>(je =>
+            {
+                je.HasOne(j=>j.AppUser).WithMany().HasForeignKey(j=>j.AppUsersId).OnDelete(DeleteBehavior.Cascade);
+                je.HasOne(j=>j.Employee).WithMany().HasForeignKey(j=>j.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            });
+        });
+       
+
+        modelBuilder.Entity<Room>(entity =>
+        {
+            entity.HasOne(r=>r.Floor).WithMany().HasForeignKey(r=>r.FloorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r=>r.Department).WithMany().HasForeignKey(r=>r.DepartmentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ServiceOrders
+        modelBuilder.Entity<ServiceOrderStatus>(entity =>
+        {
+            entity.HasIndex(sos=>sos.Status).IsUnique(true).HasFilter("\"DeletedAt\" IS NULL");
+        });
+        modelBuilder.Entity<ServiceOrder>(entity =>
+        {
+            entity.HasOne(so=>so.Room).WithMany().HasForeignKey(so=>so.RoomId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(so=>so.Status).WithMany().HasForeignKey(so=>so.StatusId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(so=>so.CreatedByEmployee).WithMany().HasForeignKey(so=>so.CreateByEmployeeId).OnDelete(DeleteBehavior.SetNull);
+        });
+        modelBuilder.Entity<ServiceOrderComment>(entity =>
+        {
+            entity.HasOne(c=>c.Author).WithMany().HasForeignKey(c=>c.AuthorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c=>c.ServiceOrder).WithMany(so=>so.Comments).HasForeignKey(c=>c.ServiceOrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+       
+       
+         // Global query filter: automatically excludes soft-deleted records
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))
+            {
+              var method = typeof(ModelBuilderExtensions).GetMethod(nameof(ModelBuilderExtensions.ApplySoftDeleteFilter))!.MakeGenericMethod(entityType.ClrType);
+              method.Invoke(null,[modelBuilder]);
+            }
         }
-        await db_actions.SaveChangesAsync();
-
-        return Result<LoginResponseDto>.Success(new LoginResponseDto{AccessToken=token,RefreshToken=user.RefreshToken});
     }
 
-    public async Task<Result<AppUser>> Register(LoginRequestDto request)
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // check for duplicate
-        if(await repo.UserExists(request.UserName)) return Result<AppUser>.Failure("gebruiker bestaat al");
-        var user = AppUser.Create(request.UserName,HashPassword(request.Password),request.IsPersonalAccount ?? false);
-        if(!user.IsSuccess) return user;
+        foreach (var entry in ChangeTracker.Entries().Where(e => e.Entity is ISoftDeletable))
+        {
+            if (entry.State == EntityState.Deleted)
+            {
+                entry.State = EntityState.Modified;
+                ((ISoftDeletable)entry.Entity).DeletedAt = DateTime.UtcNow;
+            }
+        }
+        foreach (var entry in ChangeTracker.Entries().Where(e => e.Entity is IAuditable))
+        {
+            var auditable = (IAuditable)entry.Entity;
 
-        // save to the database
-        await repo.AddUserToDatabase(user.Value);
-        await db_actions.SaveChangesAsync();
-        return user;
+            if (entry.State == EntityState.Added)
+                auditable.CreatedAt = DateTime.UtcNow;
+            else if (entry.State == EntityState.Modified)
+                auditable.UpdatedAt = DateTime.UtcNow;
+        }
 
+
+        return base.SaveChangesAsync(cancellationToken);
     }
 
 
-    public bool VerifyPassword(string userName, string password)
-    {
-        throw new NotImplementedException();
-    }
 }

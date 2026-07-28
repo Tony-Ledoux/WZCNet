@@ -26,6 +26,7 @@ public class UserRepository(WZCNetDbContext context) : IUserRepository
 
     public async Task<AppUser?> GetAppUserByIdAsync(int id)
     {
+        // get user by Id 
         return await context.AppUsers.FindAsync(id);
     }
 

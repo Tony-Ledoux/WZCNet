@@ -29,7 +29,6 @@ namespace WZCNet.src.Api.Controllers
             if(!r.IsSuccess) return BadRequest(r.Error);
             return Ok(r.Value);
         }
-        /*
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh(RefreshRequestDto request)
         {
@@ -37,7 +36,7 @@ namespace WZCNet.src.Api.Controllers
             if(!r.IsSuccess) return BadRequest(r.Error);
             return Ok(r.Value);
         }
-        */
+        
         [Authorize]
         [HttpGet]
         public ActionResult<string> Test()

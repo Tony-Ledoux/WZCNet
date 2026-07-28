@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
 using WZCNet.src.Application.DTOs;
 using WZCNet.src.Application.DTOs.Requests.Auth;
@@ -7,17 +6,44 @@ using WZCNet.src.Application.Interfaces;
 using WZCNet.src.Application.Interfaces.Repositories;
 using WZCNet.src.Domain.Common;
 using WZCNet.src.Domain.Entities;
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
 using WZCNet.src.Domain.Interfaces;
 using WZCNet.src.Domain.ValueObjects;
 
 namespace WZCNet.src.Application.Services;
 
-public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenService _ts, IRequestContext rc) : IUserService
+public class UserService(
+    IUserRepository repo,
+    IUnitOfWork dbActions,
+    ITokenService _ts,
+    IRequestContext rc,
+    IPasswordHasher<AppUser> _passwordHasher
+    ) : IUserService
 {
     public string HashPassword(string password)
     {
-        var passwordHasher = new PasswordHasher<AppUser>();
-        return passwordHasher.HashPassword(null,password);
+        return _passwordHasher.HashPassword(null,password);
+    }
+
+    private async Task<string> CreateJWT(AppUser user, Employee? employee)
+    {
+         var ts = new TokenClaimsDTO {
+                UserName = user.UserName,
+                EmployeeName = employee?.GetName(),
+                EmployeeId = employee?.Id
+            };
+        return await _ts.CreateBearerToken(ts);
+    }
+
+    private async Task<string> HandleRefreshToken(AppUser user, SessionInfo session, int? employeeId, Refreshtoken? exisitingToken)
+    {
+        if(exisitingToken == null) return user.AddRefreshToken(session,employeeId).RefreshToken;
+        if (exisitingToken.ValidUntil <= DateTime.UtcNow.AddHours(24))
+    {
+        exisitingToken.Invalidate();
+        return user.AddRefreshToken(session, employeeId).RefreshToken;
+    }
+    return exisitingToken.RefreshToken;
     }
 
     public async Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto)
@@ -25,32 +51,37 @@ public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenSer
         //TODO obscure the response on username/password error
         var user = await repo.GetAppuserByUserName(requestDto.UserName);
         if(user == null) return Result<LoginResponseDto>.Failure("Gebruiker bestaat niet");
+        if(!user.IsActive) return Result<LoginResponseDto>.Failure("Account is geblokkeerd");
         //check the password
-        var passwordHasher = new PasswordHasher<AppUser>();
-        if(passwordHasher.VerifyHashedPassword(user,user.PasswordHash,requestDto.Password) == PasswordVerificationResult.Failed) return Result<LoginResponseDto>.Failure("Ongeldig wachtwoord");
-        user.LastLogin = DateTime.UtcNow;
-        // create Jwt
-        var ts = new TokenClaimsDTO {
-                UserName = user.UserName
-            };
-        string token = await _ts.CreateBearerToken(ts);
-        //create a refreshtoken
-        
-        var rf = Refreshtoken.GetRefreshtoken(user.Id,SessionInfo.Create(rc.DeviceInfo,rc.IpAddress));
-        user.Refreshtokens.Add(rf);
-        
-        await db_actions.SaveChangesAsync();
-
-        return Result<LoginResponseDto>.Success(new LoginResponseDto{AccessToken=token,RefreshToken=rf.RefreshToken});
+        if(_passwordHasher.VerifyHashedPassword(user,user.PasswordHash,requestDto.Password) == PasswordVerificationResult.Failed)
+        {
+            user.IncrementNumberOfFailedLoginAttempts();
+            await dbActions.SaveChangesAsync();
+            return Result<LoginResponseDto>.Failure("Ongeldig wachtwoord");
+        }
+        var response = new LoginResponseDto();
+        user.RegisterSuccessfulLogin();
+        var employee = user.GetEmployeeById();
+        response.AccessToken = await CreateJWT(user,employee);
+        var sessionInfo = SessionInfo.Create(rc.DeviceInfo, rc.IpAddress);
+        var refresh = user.GetRefreshtokenByDeviceInfoAndEmployeeId(sessionInfo,employee?.Id);
+        response.RefreshToken = await HandleRefreshToken(user,sessionInfo,employee?.Id,refresh);
+        await dbActions.SaveChangesAsync();
+        return Result<LoginResponseDto>.Success(response);
     }
 
-    /*
-    public async Task<Result<LoginResponseDto>> Refresh(RefreshRequestDto request)
+
+    public async Task<Result<AppUser>> Refresh(RefreshRequestDto request)
     {
         var user = await repo.GetAppUserByIdAsync(request.AccountId);
-        if(user == null) return Result<LoginResponseDto>.Failure("Geen gekende gebruiker"); 
+        if(user == null) return Result<AppUser>.Failure("Geen gekende gebruiker");
+        //check if refreshtoken is valid
+        var token = user.GetRefreshtokenByTokenString(request.RefreshToken);
+        if(token == null) return Result<AppUser>.Failure("Token niet gevonden");
+        if(!token.IsValid())return Result<AppUser>.Failure("Token is vervallen");
+        return Result<AppUser>.Success(user);
     }
-    */
+
     public async Task<Result<AppUser>> Register(LoginRequestDto request)
     {
         // check for duplicate
@@ -60,7 +91,7 @@ public class UserService(IUserRepository repo, IUnitOfWork db_actions, ITokenSer
 
         // save to the database
         await repo.AddUserToDatabase(user.Value);
-        await db_actions.SaveChangesAsync();
+        await dbActions.SaveChangesAsync();
         return user;
 
     }

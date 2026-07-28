@@ -1,6 +1,8 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
+using WZCNet.src.Domain.Entities;
 
 namespace WZCNet.src.Api.Extensions;
 public static class AuthenticationExtension
@@ -22,7 +24,7 @@ public static class AuthenticationExtension
         ValidateIssuerSigningKey = true
     };
 });
-        
+        services.AddScoped<IPasswordHasher<AppUser>,PasswordHasher<AppUser>>();
         return services;
     }
 }

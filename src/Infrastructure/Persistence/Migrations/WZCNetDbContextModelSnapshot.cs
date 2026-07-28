@@ -8,7 +8,7 @@ using WZCNet.src.Infrastructure.Persistence.Contexts;
 
 #nullable disable
 
-namespace WZCNet.Migrations
+namespace WZCNet.src.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(WZCNetDbContext))]
     partial class WZCNetDbContextModelSnapshot : ModelSnapshot
@@ -686,6 +686,9 @@ namespace WZCNet.Migrations
                             b1.Property<DateTime?>("DeletedAt")
                                 .HasColumnType("timestamp with time zone");
 
+                            b1.Property<int?>("EmployeeId")
+                                .HasColumnType("integer");
+
                             b1.Property<string>("RefreshToken")
                                 .IsRequired()
                                 .HasColumnType("text");
@@ -700,10 +703,16 @@ namespace WZCNet.Migrations
 
                             b1.HasIndex("AppUserId");
 
+                            b1.HasIndex("EmployeeId");
+
                             b1.ToTable("Refreshtoken");
 
                             b1.WithOwner("AppUser")
                                 .HasForeignKey("AppUserId");
+
+                            b1.HasOne("WZCNet.src.Domain.Entities.EmployeeAggregate.Employee", "Employee")
+                                .WithMany()
+                                .HasForeignKey("EmployeeId");
 
                             b1.OwnsOne("WZCNet.src.Domain.ValueObjects.SessionInfo", "Device", b2 =>
                                 {
@@ -728,6 +737,8 @@ namespace WZCNet.Migrations
 
                             b1.Navigation("Device")
                                 .IsRequired();
+
+                            b1.Navigation("Employee");
                         });
 
                     b.Navigation("Refreshtokens");

@@ -4,10 +4,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace WZCNet.Migrations
+namespace WZCNet.src.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class SO : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -152,32 +152,6 @@ namespace WZCNet.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Refreshtoken",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    RefreshToken = table.Column<string>(type: "text", nullable: false),
-                    ValidUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Device_DeviceInfo = table.Column<string>(type: "text", nullable: true),
-                    Device_IpAddress = table.Column<string>(type: "text", nullable: true),
-                    AppUserId = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Refreshtoken", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Refreshtoken_AppUsers_AppUserId",
-                        column: x => x.AppUserId,
-                        principalTable: "AppUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AppUserEmployee",
                 columns: table => new
                 {
@@ -285,6 +259,38 @@ namespace WZCNet.Migrations
                         principalTable: "Employees",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Refreshtoken",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RefreshToken = table.Column<string>(type: "text", nullable: false),
+                    ValidUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Device_DeviceInfo = table.Column<string>(type: "text", nullable: true),
+                    Device_IpAddress = table.Column<string>(type: "text", nullable: true),
+                    AppUserId = table.Column<int>(type: "integer", nullable: false),
+                    EmployeeId = table.Column<int>(type: "integer", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Refreshtoken", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Refreshtoken_AppUsers_AppUserId",
+                        column: x => x.AppUserId,
+                        principalTable: "AppUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Refreshtoken_Employees_EmployeeId",
+                        column: x => x.EmployeeId,
+                        principalTable: "Employees",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -635,6 +641,11 @@ namespace WZCNet.Migrations
                 name: "IX_Refreshtoken_AppUserId",
                 table: "Refreshtoken",
                 column: "AppUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Refreshtoken_EmployeeId",
+                table: "Refreshtoken",
+                column: "EmployeeId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Rooms_DepartmentId",

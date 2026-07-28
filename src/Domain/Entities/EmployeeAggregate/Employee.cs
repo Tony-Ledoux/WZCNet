@@ -61,6 +61,11 @@ public class Employee : BaseEntity
 
         return Result<Employee>.Success(employee);
     }
+
+    public string GetName()
+    {
+        return $"{FirstName} {LastName}";
+    }
     
     //TODO Add methods to manage contacts
 

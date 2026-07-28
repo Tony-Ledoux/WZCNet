@@ -20,8 +20,19 @@ Content-Type: application/json
 }
 
 ###
+POST {{WZCNet_HostAddress}}/api/auth/refresh
+Accept: application/json
+Content-Type: application/json
+
+{
+    "accountId":"1",
+    "refreshToken":"8DWsGm+2KBO5WaeXTlAGcMLhT4XPRh5DmQaWeKTwgow="
+}
+
+###
+
 GET {{WZCNet_HostAddress}}/api/auth
-Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWZkMEBoYWxtb2xlbi5iZSIsImV4cCI6MTc4NDgzMjQzNywiaXNzIjoiV1pDTkVULUJBQ0tFTkQiLCJhdWQiOiJXWkNORVQtRlJPTlRFTkQifQ.9ev6VVsS6B30zfIBRpnneyISM42u1DU9w4O98AF9F1BkmU2VATV6zrz7i95qxIfAE7Y_WWIyhLa5CJJIg9V3sw
+Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWZkMEBoYWxtb2xlbi5iZSIsImV4cCI6MTc4NTE2MzU5NSwiaXNzIjoiV1pDTkVULUJBQ0tFTkQiLCJhdWQiOiJXWkNORVQtRlJPTlRFTkQifQ.ybLT1JDwcD2XrHOD977aiaw-Ih-UP7wEYPJtFdGndfT6shTW2asNYXoVmzohAtfzE1kqPQfy7l8fcnrY_WfS_A
 Accept: application/json
 
 ###
