@@ -16,5 +16,7 @@ public interface IUserService
     
     string HashPassword(string password);
 
+    Task<Result<LoginResponseDto>> Identify(int accountId, IdentifyRequestDto request);
+
 
 }

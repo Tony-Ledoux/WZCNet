@@ -124,4 +124,8 @@ public class UserService(
 
     }
 
+    public async Task<Result<LoginResponseDto>> Identify(int accountId, IdentifyRequestDto request)
+    {
+        return Result<LoginResponseDto>.Success(new LoginResponseDto{AccessToken="test",RefreshToken="test"});
+    }
 }
