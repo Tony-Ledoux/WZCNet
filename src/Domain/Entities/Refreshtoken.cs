@@ -35,4 +35,10 @@ public class Refreshtoken: BaseEntity
     {
         DeletedAt = DateTime.UtcNow;
     }
+
+    public void AttachEmployee(Employee employee)
+    {
+        Employee = employee;
+        EmployeeId = employee.Id;
+    }
 }

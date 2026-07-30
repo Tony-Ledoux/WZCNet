@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
+
 namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
 
 public class EmployeeAuthentication
@@ -8,24 +11,30 @@ public class EmployeeAuthentication
 
     private EmployeeAuthentication(){}
 
-    public static EmployeeAuthentication Create(string pin_hash)
+    public static EmployeeAuthentication Create(string pin)
     {
         return new EmployeeAuthentication
         {
-            PinHash = pin_hash,
-            PinChangedAt = DateTime.UtcNow
+            PinHash = GetPinHasher().HashPassword(null,pin),
+            PinChangedAt = null
         };
     }
 
-    public void ChangePin(string newPinHash)
+    private static PasswordHasher<EmployeeAuthentication> GetPinHasher()
     {
-        PinHash = newPinHash;
+        var PinHasher = new PasswordHasher<EmployeeAuthentication>();
+        return PinHasher;
+    }
+
+    public void ChangePin(string newPin)
+    {
+        PinHash = GetPinHasher().HashPassword(null,newPin);
         PinChangedAt = DateTime.UtcNow;
     }
 
     public bool ValidatePin(string pinToChek)
     {
-        bool isValid = PinHash == pinToChek;
+        bool isValid = GetPinHasher().VerifyHashedPassword(null, PinHash ,pinToChek) == PasswordVerificationResult.Success;
         if (isValid)
         {
             PinLastUsedAt = DateTime.UtcNow;

@@ -1,620 +1,3 @@
-=== src/Domain/Interfaces/ISoftDeletable.cs ===
-namespace WZCNet.src.Domain.Interfaces;
-public interface ISoftDeletable
-{
-    DateTime? DeletedAt {get;set;}
-}
-=== src/Domain/Interfaces/IAuditable.cs ===
-namespace WZCNet.src.Domain.Interfaces;
-public interface IAuditable
-{
-    public DateTime CreatedAt {get;set;}
-    public DateTime? UpdatedAt {get;set;}
-}
-=== src/Domain/Interfaces/IUserService.cs ===
-using System;
-using WZCNet.src.Application.DTOs.Requests.Auth;
-using WZCNet.src.Application.DTOs.Responses;
-using WZCNet.src.Domain.Common;
-using WZCNet.src.Domain.Entities;
-
-namespace WZCNet.src.Domain.Interfaces;
-
-public interface IUserService
-{
-    Task<Result<AppUser>> Register(LoginRequestDto request);
-
-    Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto);
-    
-    Task<Result<LoginResponseDto>> Refresh(RefreshRequestDto request);
-    
-    string HashPassword(string password);
-
-    Task<Result<LoginResponseDto>> Identify(int accountId, IdentifyRequestDto request);
-
-
-}
-
-=== src/Domain/Entities/EmployeeAggregate/EmployeeEmploymentHistoryJobTitleAssignment.cs ===
-namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-public class EmployeeEmploymentHistoryJobTitleAssignment: BaseEntity
-{
-    public int EmploymentHistoryId {get;set;}
-    public EmployeeEmploymentHistory EmploymentHistory {get;set;}
-    public int JobTitleId {get;set;}
-    public JobTitle JobTitle {get;set;}
-    public int? PrincipalDepartmentId {get;set;}
-    public Department? Department {get;set;}
-    public DateTime Start {get;set;}= DateTime.UtcNow;
-    public DateTime? End {get;set;}
-
-}
-
-=== src/Domain/Entities/EmployeeAggregate/EmployeeAddress.cs ===
-
-using WZCNet.src.Domain.Common;
-
-namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-public class EmployeeAddress: BaseEntity
-{
-    public int EmployeeId {get; private set;}
-    public string StreetName { get; private set;}
-    public string HouseNumber { get; private set;}
-    public string ZipCode { get; private set;}
-    public string Municipality { get; private set; }
-    public DateOnly? Until { get; private set; }
-    public Employee  Employee {get;set;}
-   
-    private EmployeeAddress() { }
-
-    public static Result<EmployeeAddress> Create(string streetName, string houseNumber, 
-        string zipCode, string municipality, DateOnly? until)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(streetName, nameof(streetName));
-        ArgumentException.ThrowIfNullOrEmpty(houseNumber, nameof(houseNumber));
-        ArgumentException.ThrowIfNullOrEmpty(zipCode, nameof(zipCode));
-        ArgumentException.ThrowIfNullOrEmpty(municipality, nameof(municipality));
-
-        if (until.HasValue)
-        {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            if (until.Value < today.AddYears(-100) || until.Value > today.AddYears(100))
-                return Result<EmployeeAddress>.Failure("'Until' datum moet tussen 100 jaar geleden en 100 jaar in de toekomst liggen.");
-        }
-        return Result<EmployeeAddress>.Success(new EmployeeAddress 
-        { 
-            
-            StreetName = streetName.Trim(),
-            HouseNumber = houseNumber.Trim(),
-            ZipCode = zipCode.Trim(),
-            Municipality = municipality.Trim(),
-            Until = until
-        });
-    }
-}
-=== src/Domain/Entities/EmployeeAggregate/EmployeeContact.cs ===
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-public class EmployeeContact: BaseEntity
-{
-    public int EmployeeId {get;set;}
-    public int ContactTypeId {get;set;}
-    public string ContactDetails {get;set;}
-
-
-    public Employee Employee {get;set;}
-
-    public ContactType ContactType {get;set;}
-}
-
-=== src/Domain/Entities/EmployeeAggregate/EmployeePermission.cs ===
-namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-public class EmployeePermission:BaseEntity
-{
-    public int EmployeeId {get;set;}
-    public int PermissionId {get;set;}
-    public DateTime ValidFrom {get;set;}=DateTime.UtcNow;
-    public DateTime? ValidUntil {get;set;}
-
-    public Employee Employee {get;set;}
-    public Permission Permission {get;set;}
-}
-
-=== src/Domain/Entities/EmployeeAggregate/EmployeeAuthentication.cs ===
-namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-public class EmployeeAuthentication
-{
-    public string PinHash {get;private set;}
-    public DateTime? PinChangedAt {get;private set;}
-    public DateTime? PinLastUsedAt {get;private set;}
-
-    private EmployeeAuthentication(){}
-
-    public static EmployeeAuthentication Create(string pin_hash)
-    {
-        return new EmployeeAuthentication
-        {
-            PinHash = pin_hash,
-            PinChangedAt = DateTime.UtcNow
-        };
-    }
-
-    public void ChangePin(string newPinHash)
-    {
-        PinHash = newPinHash;
-        PinChangedAt = DateTime.UtcNow;
-    }
-
-    public bool ValidatePin(string pinToChek)
-    {
-        bool isValid = PinHash == pinToChek;
-        if (isValid)
-        {
-            PinLastUsedAt = DateTime.UtcNow;
-        }
-        return isValid;
-    }
-
-    public void MarkAsUsed()
-    {
-        PinLastUsedAt = DateTime.UtcNow;
-    }
-
-}
-
-=== src/Domain/Entities/EmployeeAggregate/Employee.cs ===
-using WZCNet.src.Domain.Common;
-using WZCNet.src.Domain.ValueObjects;
-
-
-namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-public class Employee : BaseEntity
-{
-    public string FirstName { get; private set; }
-    public string LastName { get; private set; }
-    public DateOnly DateOfBirth { get; set; }
-
-    // navigation Property
-
-    public EmployeeAuthentication? Pin { get; set; }
-
-    public ICollection<EmployeeAddress> Addresses { get; private set; } = [];
-    public ICollection<EmployeeContact> EmployeeContacts { get; private set; } = [];
-    public ICollection<EmployeeEmploymentHistory> EmploymentHistories { get; private set; } = [];
-
-    public ICollection<EmployeeComment> CommentsAuthored { get; set; } = [];
-    public ICollection<EmployeeComment> CommentsRecieved { get; set; } = [];
-    public ICollection<EmployeePermission> PersonalPermissions { get; set; } = [];
-    public ICollection<AppUser> AppUsers {get;set;}=[];
-
-    private Employee() { }
-    public static Result<Employee> Create(string firstName, string lastName, DateOnly dateOfBirth, string pinHash, IEnumerable<EmployeeAddress> addresses)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(firstName, nameof(firstName));
-        ArgumentException.ThrowIfNullOrEmpty(lastName, nameof(lastName));
-        ArgumentException.ThrowIfNullOrWhiteSpace(pinHash, nameof(pinHash));
-
-
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var youngestAllowed = today.AddYears(-16);
-        var oldestAllowed = today.AddYears(-120);
-
-        if (dateOfBirth == default)
-            return Result<Employee>.Failure("Ongeldige geboortedatum.");
-
-        if (dateOfBirth < oldestAllowed || dateOfBirth > today)
-            return Result<Employee>.Failure("Geboortedatum moet binnen de laatste 120 jaar liggen.");
-
-        if (dateOfBirth > youngestAllowed)
-            return Result<Employee>.Failure("Werknemer moet minstens 16 jaar oud zijn.");
-
-        var nameResult = Name.Create(firstName, lastName);
-        if (!nameResult.IsSuccess) return Result<Employee>.Failure(nameResult.Error);
-
-        if (!addresses.Any()) return Result<Employee>.Failure("Een werknemer moet minstens één adres hebben.");
-
-        var employee = new Employee
-        {
-          
-            FirstName = nameResult.Value.First,
-            LastName = nameResult.Value.Last,
-            DateOfBirth = dateOfBirth,
-            Pin = EmployeeAuthentication.Create(pinHash),
-            Addresses = [.. addresses]
-        };
-
-        return Result<Employee>.Success(employee);
-    }
-
-    public string GetName()
-    {
-        return $"{FirstName} {LastName}";
-    }
-    
-    //TODO Add methods to manage contacts
-
-    //TODO Add methods to manage employmentHistory and jobtitles
-
-
-}
-
-=== src/Domain/Entities/EmployeeAggregate/EmployeeComment.cs ===
-namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-public class EmployeeComment: BaseEntity
-{
-    public int CreatedByEmployeeId {get;set;}
-    public string AuthorJobTitleSnapshot {get;set;}
-    public int CreatedForEmployeeId {get;set;}
-    public string RecipientJobTitleSnapshot {get;set;}
-    public int CreatedDuringEmploymentId {get;set;}
-    public bool IsPrivate {get;set;}
-    public bool IsResolved {get;set;}
-
-    //navigational properties
-    
-    public Employee Author {get;set;}
-    public Employee Recipient {get;set;}
-    public EmployeeEmploymentHistory EmploymentHistory {get;set;}
-  
-}
-
-=== src/Domain/Entities/EmployeeAggregate/EmployeeEmploymentHistory.cs ===
-namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-public class EmployeeEmploymentHistory: BaseEntity
-{
-    public int EmployeeId {get;set;}
-    public DateTime Start {get;set;}=DateTime.UtcNow;
-    public DateTime? End {get;set;}
-    public Employee Employee {get;set;}
-    public ICollection<EmployeeEmploymentHistoryJobTitleAssignment> JobTitleAssignments {get;set;}=[];
-    //public ICollection<EmployeeUser> EmployeeUsers {get;set;}=[];
-}
-
-=== src/Domain/Entities/Refreshtoken.cs ===
-using WZCNet.src.Domain.ValueObjects;
-using System.Security.Cryptography;
-using WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-namespace WZCNet.src.Domain.Entities;
-
-public class Refreshtoken: BaseEntity
-{
-    public string RefreshToken {get; private set;}
-    public DateTime ValidUntil {get;private set;}
-    public SessionInfo Device {get; private set;}
-  
-    public int AppUserId {get;private set;}
-    public int? EmployeeId {get;private set;}
-    public AppUser AppUser {get;private set;}
-    public Employee? Employee {get;private set;}
-
-    public static Refreshtoken Create(int userId, SessionInfo info, int? employeeId)
-    {
-        var randomNumber = new byte[32];
-        using var rng = RandomNumberGenerator.Create();
-        rng.GetBytes(randomNumber);
-        return new Refreshtoken
-        {
-            RefreshToken = Convert.ToBase64String(randomNumber),
-            ValidUntil = DateTime.UtcNow.AddDays(30),
-            AppUserId = userId,
-            Device = info,
-            EmployeeId = employeeId
-        };
-    }
-    public bool IsValid() => DeletedAt == null && DateTime.UtcNow < ValidUntil; 
-
-    public void Invalidate()
-    {
-        DeletedAt = DateTime.UtcNow;
-    }
-}
-
-=== src/Domain/Entities/ServiceOrderAggregate/ServiceOrderStatus.cs ===
-using System;
-
-namespace WZCNet.src.Domain.Entities.ServiceOrderAggregate;
-
-public class ServiceOrderStatus: BaseEntity
-{
-    public string Status {get;set;}
-}
-
-=== src/Domain/Entities/ServiceOrderAggregate/ServiceOrder.cs ===
-using System;
-using WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-namespace WZCNet.src.Domain.Entities.ServiceOrderAggregate;
-
-public class ServiceOrder:BaseEntity
-{
-    public int? CreateByEmployeeId {get;set;}
-    public Employee? CreatedByEmployee {get;set;}
-    public int RoomId {get;set;}
-    public Room Room {get;set;}
-    public string Problem {get;set;}
-    public int StatusId {get;set;}
-    public ServiceOrderStatus Status {get;set;}
-    public ICollection<ServiceOrderComment> Comments {get;set;}=[];
-}
-
-=== src/Domain/Entities/ServiceOrderAggregate/ServiceOrderComment.cs ===
-using WZCNet.src.Domain.Entities.EmployeeAggregate;
-
-namespace WZCNet.src.Domain.Entities.ServiceOrderAggregate;
-public class ServiceOrderComment:BaseEntity
-{
-    public string Comment {get;set;}
-    public int ServiceOrderId {get;set;}
-    public ServiceOrder ServiceOrder{get;set;}
-    public int AuthorId {get;set;}
-    public Employee Author {get;set;}
-    
-}
-=== src/Domain/Entities/AppUserEmployee.cs ===
-using WZCNet.src.Domain.Entities.EmployeeAggregate;
-using WZCNet.src.Domain.Interfaces;
-
-namespace WZCNet.src.Domain.Entities;
-
-public class AppUserEmployee:BaseEntity
-{
-    public int EmployeeId {get;set;}
-    public int AppUsersId {get;set;}
-    public Employee Employee {get;set;}
-    public AppUser AppUser {get;set;}
-}
-=== src/Domain/Entities/BaseEntity.cs ===
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using WZCNet.src.Domain.Interfaces;
-
-namespace WZCNet.src.Domain.Entities;
-
-public class BaseEntity: ISoftDeletable, IAuditable
-{
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id {get;set;}
-
-    public DateTime CreatedAt {get;set;} = DateTime.UtcNow;
-    public DateTime? UpdatedAt {get;set;}
-    public DateTime? DeletedAt {get;set;}
-}
-
-=== src/Domain/Entities/Room.cs ===
-using System;
-
-namespace WZCNet.src.Domain.Entities;
-
-public class Room: BaseEntity
-{
-    public string RoomName {get;set;}
-    public int? DepartmentId {get;set;}
-    public Department? Department {get;set;}
-    public int FloorId {get;set;}
-    public Floor Floor {get;set;}
-    public bool CanHaveResident {get;set;}
-}
-
-=== src/Domain/Entities/JobTitle.cs ===
-
-namespace WZCNet.src.Domain.Entities;
-
-public class JobTitle: BaseEntity
-{
-    public string JobTitleString {get;private set;}
-
-    private readonly List<JobTitlePermissions> _jobTitlePermissions = [];
-    public virtual IReadOnlyCollection<JobTitlePermissions> JobTitlePermissions =>_jobTitlePermissions.AsReadOnly();
-
-    //TODO Methods for Permissions
-}
-
-=== src/Domain/Entities/JobTitlePermissions.cs ===
-
-namespace WZCNet.src.Domain.Entities;
-
-public class JobTitlePermissions: BaseEntity
-{
-    public int JobTitleId {get;set;}
-    public int PermissionId {get;set;}
-
-    // navigational Properties
-    public Permission Permission {get;set;}
-    public JobTitle JobTitle {get;set;}
-}
-
-=== src/Domain/Entities/Floor.cs ===
-namespace WZCNet.src.Domain.Entities;
-public class Floor:BaseEntity
-{
-    public string FloorName {get;set;}
-}
-=== src/Domain/Entities/Permission.cs ===
-namespace WZCNet.src.Domain.Entities;
-
-public class Permission: BaseEntity
-{
-    public string PermissionString {get;set;}
-
-}
-
-=== src/Domain/Entities/ContactType.cs ===
-namespace WZCNet.src.Domain.Entities;
-
-public class ContactType: BaseEntity
-{
-    public string TypeOfContact {get;set;}
-}
-
-=== src/Domain/Entities/Department.cs ===
-using System;
-
-namespace WZCNet.src.Domain.Entities;
-
-public class Department:BaseEntity
-{
-    public string DepartmentName {get;set;}
-}
-
-=== src/Domain/Entities/AppUser.cs ===
-using System.Security.Cryptography;
-using Microsoft.AspNetCore.SignalR;
-using WZCNet.src.Domain.Common;
-using WZCNet.src.Domain.Entities.EmployeeAggregate;
-using WZCNet.src.Domain.ValueObjects;
-
-namespace WZCNet.src.Domain.Entities;
-
-public class AppUser : BaseEntity
-{
-    public string UserName { get; set; }
-    public string PasswordHash { get; set; }
-    public bool IsPersonalAccount { get; set; }
-    public bool IsActive { get; set; } = true;
-    public int NumberOfFailedLoginAttempts { get; set; }
-    public DateTime? LastLogin { get; set; }
-    public DateTime? PasswordLastChangedAt { get; set; }
-    public ICollection<Refreshtoken> Refreshtokens { get; set; } = [];
-    public ICollection<Employee> Employees { get; set; } = [];
-
-    private AppUser() { }
-    public static Result<AppUser> Create(string userName, string passwordHash, bool IsPersonalAccount = false)
-    {
-        // Validate required parameters
-        if (string.IsNullOrWhiteSpace(userName)) return Result<AppUser>.Failure("username kan niet null of leeg zijn");
-
-        if (string.IsNullOrWhiteSpace(passwordHash)) return Result<AppUser>.Failure("paswoordhash kan niet leeg of null zijn");
-        var user = new AppUser
-        {
-            UserName = userName,
-            PasswordHash = passwordHash,
-            IsPersonalAccount = IsPersonalAccount
-        };
-        return Result<AppUser>.Success(user);
-    }
-
-    public void RegisterSuccessfulLogin()
-    {
-        LastLogin = DateTime.UtcNow;
-        NumberOfFailedLoginAttempts = 0;
-    }
-
-    public void IncrementNumberOfFailedLoginAttempts()
-    {
-        NumberOfFailedLoginAttempts++;
-    }
-
-
-}
-=== src/Domain/Common/Result.cs ===
-using System;
-
-namespace WZCNet.src.Domain.Common;
-
-public class Result<T>
-{
-    public T? Value {get;}
-    public string? Error {get;}
-    public bool IsSuccess => Error == null;
-
-    protected Result(T? value,string? error)
-    {
-        Value = value;
-        Error = error;
-    }
-
-    public static Result<T> Success(T value)=>new(value,null);
-    public static Result<T> Failure(string error)=>new(default,error);
-}
-
-=== src/Domain/ValueObjects/SessionInfo.cs ===
-
-namespace WZCNet.src.Domain.ValueObjects;
-
-public  class SessionInfo
-{
-    public string? DeviceInfo {get;}
-    public string? IpAddress {get;}
-    private SessionInfo(){}
-    private SessionInfo(string? device, string? ip)
-    {
-        DeviceInfo = device;
-        IpAddress = ip;
-    }
-
-    public static SessionInfo Create(string? device, string? ip) => new(device,ip);
-
-}
-
-=== src/Domain/ValueObjects/Name.cs ===
-
-using WZCNet.src.Domain.Common;
-
-namespace WZCNet.src.Domain.ValueObjects;
-
-public sealed class Name
-{
-    public string First {get;}
-    public string Last {get;}
-
-    public static Result<Name> Create(string first, string last)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(first, nameof(first));
-        ArgumentException.ThrowIfNullOrEmpty(last, nameof(last));
-
-        return Result<Name>.Success(new Name(first.Trim(),last.Trim()));
-    }
-
-    private Name(string first, string last)
-    {
-        First = first;
-        Last = last;
-    }
-}
-
-=== src/Api/Extensions/AuthenticationExtension.cs ===
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
-using WZCNet.src.Domain.Entities;
-
-namespace WZCNet.src.Api.Extensions;
-public static class AuthenticationExtension
-{
-    public static IServiceCollection AddApplicationAuthentication(this IServiceCollection services, IConfiguration configuration)
-    {
-
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidIssuer = configuration["AppSettings:Issuer"],
-        ValidateAudience = true,
-        ValidAudience = configuration["AppSettings:Audience"],
-        ValidateLifetime = true,
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(configuration["AppSettings:Token"]!)),
-        ValidateIssuerSigningKey = true
-    };
-});
-        services.AddScoped<IPasswordHasher<AppUser>,PasswordHasher<AppUser>>();
-        return services;
-    }
-}
 === src/Api/Controllers/AuthController.cs ===
 
 using System.Security.Claims;
@@ -678,6 +61,38 @@ namespace WZCNet.src.Api.Controllers
     }
 }
 
+=== src/Api/Extensions/AuthenticationExtension.cs ===
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
+using WZCNet.src.Domain.Entities;
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+namespace WZCNet.src.Api.Extensions;
+public static class AuthenticationExtension
+{
+    public static IServiceCollection AddApplicationAuthentication(this IServiceCollection services, IConfiguration configuration)
+    {
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = configuration["AppSettings:Issuer"],
+        ValidateAudience = true,
+        ValidAudience = configuration["AppSettings:Audience"],
+        ValidateLifetime = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(configuration["AppSettings:Token"]!)),
+        ValidateIssuerSigningKey = true
+    };
+});
+        services.AddScoped<IPasswordHasher<AppUser>,PasswordHasher<AppUser>>();
+        return services;
+    }
+}
 === src/Api/Program.cs ===
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -721,56 +136,106 @@ app.MapControllers();
 
 app.Run();
 
-=== src/Application/Interfaces/IRequestContext.cs ===
-using WZCNet.src.Domain.Entities;
-
-namespace WZCNet.src.Application.Interfaces;
-
-public interface IRequestContext
-{
-    string? IpAddress { get; }
-    string? DeviceInfo { get; }
-}
-
-=== src/Application/Interfaces/ITokenService.cs ===
+=== src/Application/Converters/DateOnlyJsonConverter.cs ===
 using System;
-using WZCNet.src.Application.DTOs;
-using WZCNet.src.Domain.Entities;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
-namespace WZCNet.src.Application.Interfaces;
+namespace WZCNet.src.Application.Converters;
 
-public interface ITokenService
+public class DateOnlyJsonConverter: JsonConverter<DateOnly>
 {
-    Task<string> CreateBearerToken(TokenClaimsDTO user);
+    private static readonly string[] _formats = ["yyyy-MM-dd","dd/MM/yyyy", "MM/dd/yyyy"];
+    public override DateOnly Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var value = reader.GetString();
+        foreach (var format in _formats)
+        {
+            if(DateOnly.TryParseExact(value,format,out var date)) return date;
+        }
+        return default;
+    }
+    public override void Write(Utf8JsonWriter writer, DateOnly value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value.ToString("yyyy-MM-dd"));
+    }
 }
 
-=== src/Application/Interfaces/Repositories/IUnitOfWork.cs ===
-using WZCNet.src.Domain.Entities;
+=== src/Application/Converters/ArrayConverterFactory.cs ===
+using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
-namespace WZCNet.src.Application.Interfaces.Repositories;
+namespace WZCNet.src.Application.Converters;
 
-public interface IUnitOfWork
+public sealed class ArrayConverterFactory:JsonConverterFactory
 {
-    Task SaveChangesAsync();
-    void Add<T>(T entity) where T:BaseEntity;
-    void Remove<T>(T entity) where T:BaseEntity;
-}
-=== src/Application/Interfaces/Repositories/IUserAccountRepository.cs ===
-using WZCNet.src.Domain.Entities;
-using WZCNet.src.Domain.ValueObjects;
+public override bool CanConvert(Type typeToConvert)
+        => typeToConvert.IsArray && !typeToConvert.GetElementType()!.IsAbstract;
 
-namespace WZCNet.src.Application.Interfaces.Repositories;
-
-public interface IUserAccountRepository
-{
-    Task<bool> UserExists(string userName);
-
-    Task<AppUser?> GetAppuserByUserName(string userName);
-    Task<AppUser?> GetAppUserByIdAsync(int id);
-    Task<Refreshtoken?> GetRefreshtokenByTokenStringAsync(string token);
-    Task<Refreshtoken?> GetRefreshtokenByAccountIdAndSessionInfoAsync(int AccountId, SessionInfo session);
+    public override JsonConverter? CreateConverter(
+        Type typeToConvert,
+        JsonSerializerOptions options)
+    {
+        var elementType = typeToConvert.GetElementType()!;
+        var converterType = typeof(ArrayConverter<>).MakeGenericType(elementType);
+        return (JsonConverter)Activator.CreateInstance(converterType)!;
+    }
 }
 
+=== src/Application/Converters/ArrayConverter.cs ===
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace WZCNet.src.Application.Converters;
+
+public sealed class ArrayConverter<T> : JsonConverter<T[]?>
+{
+    public override T[]? Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null)
+            return null;
+
+        if (reader.TokenType != JsonTokenType.StartArray)
+            throw new JsonException(
+                $"Expected a JSON array for '{typeToConvert.Name}'.");
+
+        //using var document = JsonDocument.ParseValue(ref reader);
+        //return JsonSerializer.Deserialize<T[]>(
+        //    document.RootElement.GetRawText(), options);
+        using var document = JsonDocument.ParseValue(ref reader);
+        var results = new List<T>();
+
+        int index = 0;
+        foreach (var element in document.RootElement.EnumerateArray())
+        {
+            try
+            {
+                var item = JsonSerializer.Deserialize<T>(element.GetRawText(), options) ?? throw new JsonException(
+                        $"Please provide a valid {typeof(T).Name} element at index [{index}].");
+                results.Add(item);
+            }
+            catch (JsonException)
+            {
+                throw new JsonException(
+                    $"Please provide a valid {typeof(T).Name} element at index [{index}].");
+            }
+
+            index++;
+        }
+
+        return results.ToArray();
+    }
+
+    public override void Write(
+        Utf8JsonWriter writer,
+        T[]? value,
+        JsonSerializerOptions options)
+        => JsonSerializer.Serialize(writer, value, options);
+}
 === src/Application/Services/UserService.cs ===
 using Microsoft.AspNetCore.Identity;
 using WZCNet.src.Application.DTOs;
@@ -900,6 +365,11 @@ public class UserService(
 
     public async Task<Result<LoginResponseDto>> Identify(int accountId, IdentifyRequestDto request)
     {
+        var user = await repo.GetAppUserByIdAsync(accountId);
+        if(user == null) return Result<LoginResponseDto>.Failure("Account bestaat niet.");
+        var employee = await GetEmployeeByIdFromUser(user, request.EmployeeId);
+        if(employee == null) return Result<LoginResponseDto>.Failure("Werknemer bestaat niet");
+        //validate pin
         return Result<LoginResponseDto>.Success(new LoginResponseDto{AccessToken="test",RefreshToken="test"});
     }
 }
@@ -943,301 +413,6 @@ public class TokenService(IConfiguration configuration) : ITokenService
     }
 }
 
-=== src/Application/DTOs/EmployeeBaseDto.cs ===
-namespace WZCNet.src.Application.DTOs;
-
-public class EmployeeBaseDto
-{
-    public int Id {get;set;}
-    public string FirstName {get;set;}
-    public string LastName {get;set;}
-    public DateOnly DateOfBirth {get;set;}
-  
-
-    public int Age
-    {
-        get {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            int age = today.Year - DateOfBirth.Year;
-            
-            // Controleer of de verjaardag dit jaar al is geweest
-            // Als de geboortedatum na "vandaag minus X jaar" ligt, trekken we er 1 van af
-            if (DateOfBirth > today.AddYears(-age)) age--;
-            
-            return age;
-        }}
-}
-
-=== src/Application/DTOs/Creation/EmployeeAddressCreationBase.cs ===
-
-using System.ComponentModel.DataAnnotations;
-
-
-namespace WZCNet.src.Application.DTOs.Creation;
-
-public class EmployeeAddressCreationBase
-{
-    private string _streetName = string.Empty;
-    private string _houseNumber = string.Empty;
-    private string _zipCode = string.Empty;
-    private string _municipality = string.Empty;
-    [Required(ErrorMessage ="Straatnaam mag niet leeg zijn")]
-    public string StreetName
-    {
-        get => _streetName;
-        set => _streetName = value?.Trim() ?? string.Empty;
-    }
-    [Required(ErrorMessage ="Huisnummer mag niet leeg zijn")]
-    public string HouseNumber
-    {
-        get => _houseNumber;
-        set => _houseNumber = value?.Trim() ?? string.Empty;
-    }
-    [Required(ErrorMessage ="Postcode mag niet leeg zijn")]
-    public string ZipCode
-    {
-        get => _zipCode;
-        set => _zipCode = value?.Trim() ?? string.Empty;
-    }
-    [Required(ErrorMessage ="Gemeente mag niet leeg zijn")]
-    public string Municipality
-    {
-        get => _municipality;
-        set => _municipality = value?.Trim() ?? string.Empty;
-    }
-    //[DateRange(MaxYearsAgo =120, AllowFuture =true, MaxYearsFuture = 5)]
-    public DateOnly? Until {get;set;}
-}
-
-=== src/Application/DTOs/Creation/EmployeeCreationDTO.cs ===
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
-using WZCNet.src.Application.Converters;
-
-
-namespace WZCNet.src.Application.DTOs.Creation;
-
-public class EmployeeCreationDTO
-{
-    private string _firstname = string.Empty;
-    private string _lastname = string.Empty;
-
-    [Required(ErrorMessage = "Voornaam is verplicht")]
-    [MaxLength(50, ErrorMessage = "De maximumlengte is 50 characters")]
-    public string FirstName
-    {
-        get => _firstname;
-        set => _firstname = value?.Trim() ?? string.Empty;
-    }
-
-    [Required(ErrorMessage = "Familienaam is verplicht")]
-    [MaxLength(50, ErrorMessage = "De maximumlengte is 50 characters")]
-    public string LastName
-    {
-        get => _lastname;
-        set => _lastname = value?.Trim() ?? string.Empty;
-    }
-
-    [Required]
-    //[DateRange(MaxYearsAgo = 120)]
-    public DateOnly DateOfBirth { get; set; }
-
-    [JsonConverter(typeof(ArrayConverterFactory))]
-    //[ValidateArrayItems(typeof(EmployeeAddressCreationBase))]
-    public EmployeeAddressCreationBase[]? Addresses {get;set;}
-    
-
-
-}
-
-=== src/Application/DTOs/EmployeeWithAddressDto.cs ===
-
-
-namespace WZCNet.src.Application.DTOs;
-
-public class EmployeeWithAddressDto:EmployeeBaseDto
-{
-    public List<EmployeeAddressDto> Addresses {get;set;}= [];
-}
-
-=== src/Application/DTOs/Requests/Auth/LoginRequestDto.cs ===
-namespace WZCNet.src.Application.DTOs.Requests.Auth;
-public class LoginRequestDto
-{
-    public string UserName {get;set;}=string.Empty;
-    public string Password {get;set;}=string.Empty;
-    public bool? IsPersonalAccount {get;set;}
-}
-=== src/Application/DTOs/Requests/Auth/IdentifyRequestDto.cs ===
-namespace WZCNet.src.Application.DTOs.Requests.Auth;
-public class IdentifyRequestDto
-{
-    public required int EmployeeId {get;set;}
-    public required string Pin {get;set;}=string.Empty;
-
-}
-=== src/Application/DTOs/Requests/Auth/RefreshRequestDto.cs ===
-namespace WZCNet.src.Application.DTOs.Requests.Auth;
-public class RefreshRequestDto
-{
-    public string RefreshToken {get;set;}=string.Empty;
-    public int AccountId {get;set;}
-}
-=== src/Application/DTOs/TokenClaimsDTO.cs ===
-using System;
-
-namespace WZCNet.src.Application.DTOs;
-
-public class TokenClaimsDTO
-{
-    public string UserName  {get;set;}
-    public int UserAccountId {get;set;}
-    public string? EmployeeName{get;set;}
-    public int? EmployeeId {get;set;}
-}
-
-=== src/Application/DTOs/EmployeeAddressDto.cs ===
-using System;
-
-namespace WZCNet.src.Application.DTOs;
-
-public class EmployeeAddressDto
-{
-    public string StreetName {get;set;}
-    public string HouseNumber {get;set;}
-    public string ZipCode {get;set;}
-    public string Municipality {get;set;}
-    public DateOnly? Until {get;set;}
-}
-
-=== src/Application/DTOs/Responses/LoginResponseDto.cs ===
-namespace WZCNet.src.Application.DTOs.Responses;
-public sealed class LoginResponseDto
-{
-    public string AccessToken {get;set;}
-    public string RefreshToken {get;set;}
-}
-=== src/Application/Extensions/ServiceCollectionExtensions.cs ===
-using WZCNet.src.Application.Interfaces;
-using WZCNet.src.Application.Interfaces.Repositories;
-using WZCNet.src.Application.Services;
-using WZCNet.src.Domain.Interfaces;
-using WZCNet.src.Infrastructure.Persistence.Repositories;
-
-namespace WZCNet.src.Application.Extensions;
-public static class ServiceCollectionExtensions
-{
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
-    {
-        services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IUserService,UserService>();
-        services.AddScoped<IUnitOfWork,UnitOfWork>();
-        services.AddScoped<IUserAccountRepository,UserAccountRepository>();
-        
-
-        return services;
-    }
-}
-=== src/Application/Converters/DateOnlyJsonConverter.cs ===
-using System;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
-namespace WZCNet.src.Application.Converters;
-
-public class DateOnlyJsonConverter: JsonConverter<DateOnly>
-{
-    private static readonly string[] _formats = ["yyyy-MM-dd","dd/MM/yyyy", "MM/dd/yyyy"];
-    public override DateOnly Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        var value = reader.GetString();
-        foreach (var format in _formats)
-        {
-            if(DateOnly.TryParseExact(value,format,out var date)) return date;
-        }
-        return default;
-    }
-    public override void Write(Utf8JsonWriter writer, DateOnly value, JsonSerializerOptions options)
-    {
-        writer.WriteStringValue(value.ToString("yyyy-MM-dd"));
-    }
-}
-
-=== src/Application/Converters/ArrayConverterFactory.cs ===
-using System;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
-namespace WZCNet.src.Application.Converters;
-
-public sealed class ArrayConverterFactory:JsonConverterFactory
-{
-public override bool CanConvert(Type typeToConvert)
-        => typeToConvert.IsArray && !typeToConvert.GetElementType()!.IsAbstract;
-
-    public override JsonConverter? CreateConverter(
-        Type typeToConvert,
-        JsonSerializerOptions options)
-    {
-        var elementType = typeToConvert.GetElementType()!;
-        var converterType = typeof(ArrayConverter<>).MakeGenericType(elementType);
-        return (JsonConverter)Activator.CreateInstance(converterType)!;
-    }
-}
-
-=== src/Application/Converters/ArrayConverter.cs ===
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
-namespace WZCNet.src.Application.Converters;
-
-public sealed class ArrayConverter<T> : JsonConverter<T[]?>
-{
-    public override T[]? Read(
-        ref Utf8JsonReader reader,
-        Type typeToConvert,
-        JsonSerializerOptions options)
-    {
-        if (reader.TokenType == JsonTokenType.Null)
-            return null;
-
-        if (reader.TokenType != JsonTokenType.StartArray)
-            throw new JsonException(
-                $"Expected a JSON array for '{typeToConvert.Name}'.");
-
-        //using var document = JsonDocument.ParseValue(ref reader);
-        //return JsonSerializer.Deserialize<T[]>(
-        //    document.RootElement.GetRawText(), options);
-        using var document = JsonDocument.ParseValue(ref reader);
-        var results = new List<T>();
-
-        int index = 0;
-        foreach (var element in document.RootElement.EnumerateArray())
-        {
-            try
-            {
-                var item = JsonSerializer.Deserialize<T>(element.GetRawText(), options) ?? throw new JsonException(
-                        $"Please provide a valid {typeof(T).Name} element at index [{index}].");
-                results.Add(item);
-            }
-            catch (JsonException)
-            {
-                throw new JsonException(
-                    $"Please provide a valid {typeof(T).Name} element at index [{index}].");
-            }
-
-            index++;
-        }
-
-        return results.ToArray();
-    }
-
-    public override void Write(
-        Utf8JsonWriter writer,
-        T[]? value,
-        JsonSerializerOptions options)
-        => JsonSerializer.Serialize(writer, value, options);
-}
 === src/Application/Validation/ValidateArrayItemsAttribute.cs ===
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -1364,6 +539,846 @@ public class DateRangeAttribute : ValidationAttribute
         return ValidationResult.Success;
     }
 }
+=== src/Application/DTOs/Responses/LoginResponseDto.cs ===
+namespace WZCNet.src.Application.DTOs.Responses;
+public sealed class LoginResponseDto
+{
+    public string AccessToken {get;set;}
+    public string RefreshToken {get;set;}
+}
+=== src/Application/DTOs/Requests/Auth/LoginRequestDto.cs ===
+namespace WZCNet.src.Application.DTOs.Requests.Auth;
+public class LoginRequestDto
+{
+    public string UserName {get;set;}=string.Empty;
+    public string Password {get;set;}=string.Empty;
+    public bool? IsPersonalAccount {get;set;}
+}
+=== src/Application/DTOs/Requests/Auth/RefreshRequestDto.cs ===
+namespace WZCNet.src.Application.DTOs.Requests.Auth;
+public class RefreshRequestDto
+{
+    public string RefreshToken {get;set;}=string.Empty;
+    public int AccountId {get;set;}
+}
+=== src/Application/DTOs/Requests/Auth/IdentifyRequestDto.cs ===
+namespace WZCNet.src.Application.DTOs.Requests.Auth;
+public class IdentifyRequestDto
+{
+    public required int EmployeeId {get;set;}
+    public required string Pin {get;set;}=string.Empty;
+
+}
+=== src/Application/DTOs/TokenClaimsDTO.cs ===
+using System;
+
+namespace WZCNet.src.Application.DTOs;
+
+public class TokenClaimsDTO
+{
+    public string UserName  {get;set;}
+    public int UserAccountId {get;set;}
+    public string? EmployeeName{get;set;}
+    public int? EmployeeId {get;set;}
+}
+
+=== src/Application/DTOs/EmployeeBaseDto.cs ===
+namespace WZCNet.src.Application.DTOs;
+
+public class EmployeeBaseDto
+{
+    public int Id {get;set;}
+    public string FirstName {get;set;}
+    public string LastName {get;set;}
+    public DateOnly DateOfBirth {get;set;}
+  
+
+    public int Age
+    {
+        get {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            int age = today.Year - DateOfBirth.Year;
+            
+            // Controleer of de verjaardag dit jaar al is geweest
+            // Als de geboortedatum na "vandaag minus X jaar" ligt, trekken we er 1 van af
+            if (DateOfBirth > today.AddYears(-age)) age--;
+            
+            return age;
+        }}
+}
+
+=== src/Application/DTOs/Creation/EmployeeCreationDTO.cs ===
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using WZCNet.src.Application.Converters;
+
+
+namespace WZCNet.src.Application.DTOs.Creation;
+
+public class EmployeeCreationDTO
+{
+    private string _firstname = string.Empty;
+    private string _lastname = string.Empty;
+
+    [Required(ErrorMessage = "Voornaam is verplicht")]
+    [MaxLength(50, ErrorMessage = "De maximumlengte is 50 characters")]
+    public string FirstName
+    {
+        get => _firstname;
+        set => _firstname = value?.Trim() ?? string.Empty;
+    }
+
+    [Required(ErrorMessage = "Familienaam is verplicht")]
+    [MaxLength(50, ErrorMessage = "De maximumlengte is 50 characters")]
+    public string LastName
+    {
+        get => _lastname;
+        set => _lastname = value?.Trim() ?? string.Empty;
+    }
+
+    [Required]
+    //[DateRange(MaxYearsAgo = 120)]
+    public DateOnly DateOfBirth { get; set; }
+
+    [JsonConverter(typeof(ArrayConverterFactory))]
+    //[ValidateArrayItems(typeof(EmployeeAddressCreationBase))]
+    public EmployeeAddressCreationBase[]? Addresses {get;set;}
+    
+
+
+}
+
+=== src/Application/DTOs/Creation/EmployeeAddressCreationBase.cs ===
+
+using System.ComponentModel.DataAnnotations;
+
+
+namespace WZCNet.src.Application.DTOs.Creation;
+
+public class EmployeeAddressCreationBase
+{
+    private string _streetName = string.Empty;
+    private string _houseNumber = string.Empty;
+    private string _zipCode = string.Empty;
+    private string _municipality = string.Empty;
+    [Required(ErrorMessage ="Straatnaam mag niet leeg zijn")]
+    public string StreetName
+    {
+        get => _streetName;
+        set => _streetName = value?.Trim() ?? string.Empty;
+    }
+    [Required(ErrorMessage ="Huisnummer mag niet leeg zijn")]
+    public string HouseNumber
+    {
+        get => _houseNumber;
+        set => _houseNumber = value?.Trim() ?? string.Empty;
+    }
+    [Required(ErrorMessage ="Postcode mag niet leeg zijn")]
+    public string ZipCode
+    {
+        get => _zipCode;
+        set => _zipCode = value?.Trim() ?? string.Empty;
+    }
+    [Required(ErrorMessage ="Gemeente mag niet leeg zijn")]
+    public string Municipality
+    {
+        get => _municipality;
+        set => _municipality = value?.Trim() ?? string.Empty;
+    }
+    //[DateRange(MaxYearsAgo =120, AllowFuture =true, MaxYearsFuture = 5)]
+    public DateOnly? Until {get;set;}
+}
+
+=== src/Application/DTOs/EmployeeWithAddressDto.cs ===
+
+
+namespace WZCNet.src.Application.DTOs;
+
+public class EmployeeWithAddressDto:EmployeeBaseDto
+{
+    public List<EmployeeAddressDto> Addresses {get;set;}= [];
+}
+
+=== src/Application/DTOs/EmployeeAddressDto.cs ===
+using System;
+
+namespace WZCNet.src.Application.DTOs;
+
+public class EmployeeAddressDto
+{
+    public string StreetName {get;set;}
+    public string HouseNumber {get;set;}
+    public string ZipCode {get;set;}
+    public string Municipality {get;set;}
+    public DateOnly? Until {get;set;}
+}
+
+=== src/Application/Extensions/ServiceCollectionExtensions.cs ===
+using WZCNet.src.Application.Interfaces;
+using WZCNet.src.Application.Interfaces.Repositories;
+using WZCNet.src.Application.Services;
+using WZCNet.src.Domain.Interfaces;
+using WZCNet.src.Infrastructure.Persistence.Repositories;
+
+namespace WZCNet.src.Application.Extensions;
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    {
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IUserService,UserService>();
+        services.AddScoped<IUnitOfWork,UnitOfWork>();
+        services.AddScoped<IUserAccountRepository,UserAccountRepository>();
+        
+
+        return services;
+    }
+}
+=== src/Application/Interfaces/ITokenService.cs ===
+using System;
+using WZCNet.src.Application.DTOs;
+using WZCNet.src.Domain.Entities;
+
+namespace WZCNet.src.Application.Interfaces;
+
+public interface ITokenService
+{
+    Task<string> CreateBearerToken(TokenClaimsDTO user);
+}
+
+=== src/Application/Interfaces/IRequestContext.cs ===
+using WZCNet.src.Domain.Entities;
+
+namespace WZCNet.src.Application.Interfaces;
+
+public interface IRequestContext
+{
+    string? IpAddress { get; }
+    string? DeviceInfo { get; }
+}
+
+=== src/Application/Interfaces/Repositories/IUnitOfWork.cs ===
+using WZCNet.src.Domain.Entities;
+
+namespace WZCNet.src.Application.Interfaces.Repositories;
+
+public interface IUnitOfWork
+{
+    Task SaveChangesAsync();
+    void Add<T>(T entity) where T:BaseEntity;
+    void Remove<T>(T entity) where T:BaseEntity;
+}
+=== src/Application/Interfaces/Repositories/IUserAccountRepository.cs ===
+using WZCNet.src.Domain.Entities;
+using WZCNet.src.Domain.ValueObjects;
+
+namespace WZCNet.src.Application.Interfaces.Repositories;
+
+public interface IUserAccountRepository
+{
+    Task<bool> UserExists(string userName);
+
+    Task<AppUser?> GetAppuserByUserName(string userName);
+    Task<AppUser?> GetAppUserByIdAsync(int id);
+    Task<Refreshtoken?> GetRefreshtokenByTokenStringAsync(string token);
+    Task<Refreshtoken?> GetRefreshtokenByAccountIdAndSessionInfoAsync(int AccountId, SessionInfo session);
+}
+
+=== src/Domain/Entities/BaseEntity.cs ===
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using WZCNet.src.Domain.Interfaces;
+
+namespace WZCNet.src.Domain.Entities;
+
+public class BaseEntity: ISoftDeletable, IAuditable
+{
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public int Id {get;set;}
+
+    public DateTime CreatedAt {get;set;} = DateTime.UtcNow;
+    public DateTime? UpdatedAt {get;set;}
+    public DateTime? DeletedAt {get;set;}
+}
+
+=== src/Domain/Entities/Permission.cs ===
+namespace WZCNet.src.Domain.Entities;
+
+public class Permission: BaseEntity
+{
+    public string PermissionString {get;set;}
+
+}
+
+=== src/Domain/Entities/EmployeeAggregate/EmployeeContact.cs ===
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+public class EmployeeContact: BaseEntity
+{
+    public int EmployeeId {get;set;}
+    public int ContactTypeId {get;set;}
+    public string ContactDetails {get;set;}
+
+
+    public Employee Employee {get;set;}
+
+    public ContactType ContactType {get;set;}
+}
+
+=== src/Domain/Entities/EmployeeAggregate/EmployeePermission.cs ===
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+public class EmployeePermission:BaseEntity
+{
+    public int EmployeeId {get;set;}
+    public int PermissionId {get;set;}
+    public DateTime ValidFrom {get;set;}=DateTime.UtcNow;
+    public DateTime? ValidUntil {get;set;}
+
+    public Employee Employee {get;set;}
+    public Permission Permission {get;set;}
+}
+
+=== src/Domain/Entities/EmployeeAggregate/Employee.cs ===
+using WZCNet.src.Domain.Common;
+using WZCNet.src.Domain.ValueObjects;
+
+
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+public class Employee : BaseEntity
+{
+    public string FirstName { get; private set; }
+    public string LastName { get; private set; }
+    public DateOnly DateOfBirth { get; set; }
+
+    // navigation Property
+
+    public EmployeeAuthentication? Pin { get; set; }
+
+    public ICollection<EmployeeAddress> Addresses { get; private set; } = [];
+    public ICollection<EmployeeContact> EmployeeContacts { get; private set; } = [];
+    public ICollection<EmployeeEmploymentHistory> EmploymentHistories { get; private set; } = [];
+
+    public ICollection<EmployeeComment> CommentsAuthored { get; set; } = [];
+    public ICollection<EmployeeComment> CommentsRecieved { get; set; } = [];
+    public ICollection<EmployeePermission> PersonalPermissions { get; set; } = [];
+    public ICollection<AppUser> AppUsers {get;set;}=[];
+
+    private Employee() { }
+    public static Result<Employee> Create(string firstName, string lastName, DateOnly dateOfBirth, string pinHash, IEnumerable<EmployeeAddress> addresses)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(firstName, nameof(firstName));
+        ArgumentException.ThrowIfNullOrEmpty(lastName, nameof(lastName));
+        ArgumentException.ThrowIfNullOrWhiteSpace(pinHash, nameof(pinHash));
+
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var youngestAllowed = today.AddYears(-16);
+        var oldestAllowed = today.AddYears(-120);
+
+        if (dateOfBirth == default)
+            return Result<Employee>.Failure("Ongeldige geboortedatum.");
+
+        if (dateOfBirth < oldestAllowed || dateOfBirth > today)
+            return Result<Employee>.Failure("Geboortedatum moet binnen de laatste 120 jaar liggen.");
+
+        if (dateOfBirth > youngestAllowed)
+            return Result<Employee>.Failure("Werknemer moet minstens 16 jaar oud zijn.");
+
+        var nameResult = Name.Create(firstName, lastName);
+        if (!nameResult.IsSuccess) return Result<Employee>.Failure(nameResult.Error);
+
+        if (!addresses.Any()) return Result<Employee>.Failure("Een werknemer moet minstens één adres hebben.");
+
+        var employee = new Employee
+        {
+          
+            FirstName = nameResult.Value.First,
+            LastName = nameResult.Value.Last,
+            DateOfBirth = dateOfBirth,
+            Pin = EmployeeAuthentication.Create(pinHash),
+            Addresses = [.. addresses]
+        };
+
+        return Result<Employee>.Success(employee);
+    }
+
+    public string GetName()
+    {
+        return $"{FirstName} {LastName}";
+    }
+    
+    //TODO Add methods to manage contacts
+
+    //TODO Add methods to manage employmentHistory and jobtitles
+
+
+}
+
+=== src/Domain/Entities/EmployeeAggregate/EmployeeAuthentication.cs ===
+using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
+
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+public class EmployeeAuthentication
+{
+    public string PinHash {get;private set;}
+    public DateTime? PinChangedAt {get;private set;}
+    public DateTime? PinLastUsedAt {get;private set;}
+
+    private EmployeeAuthentication(){}
+
+    public static EmployeeAuthentication Create(string pin)
+    {
+        return new EmployeeAuthentication
+        {
+            PinHash = GetPinHasher().HashPassword(null,pin),
+            PinChangedAt = DateTime.UtcNow
+        };
+    }
+
+    private static PasswordHasher<EmployeeAuthentication> GetPinHasher()
+    {
+        var PinHasher = new PasswordHasher<EmployeeAuthentication>();
+        return PinHasher;
+    }
+
+    public void ChangePin(string newPin)
+    {
+        PinHash = GetPinHasher().HashPassword(null,newPin);
+        PinChangedAt = DateTime.UtcNow;
+    }
+
+    public bool ValidatePin(string pinToChek)
+    {
+        bool isValid = GetPinHasher().VerifyHashedPassword(null, PinHash ,pinToChek) == PasswordVerificationResult.Success;
+        if (isValid)
+        {
+            PinLastUsedAt = DateTime.UtcNow;
+        }
+        return isValid;
+    }
+
+    public void MarkAsUsed()
+    {
+        PinLastUsedAt = DateTime.UtcNow;
+    }
+
+}
+
+=== src/Domain/Entities/EmployeeAggregate/EmployeeComment.cs ===
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+public class EmployeeComment: BaseEntity
+{
+    public int CreatedByEmployeeId {get;set;}
+    public string AuthorJobTitleSnapshot {get;set;}
+    public int CreatedForEmployeeId {get;set;}
+    public string RecipientJobTitleSnapshot {get;set;}
+    public int CreatedDuringEmploymentId {get;set;}
+    public bool IsPrivate {get;set;}
+    public bool IsResolved {get;set;}
+
+    //navigational properties
+    
+    public Employee Author {get;set;}
+    public Employee Recipient {get;set;}
+    public EmployeeEmploymentHistory EmploymentHistory {get;set;}
+  
+}
+
+=== src/Domain/Entities/EmployeeAggregate/EmployeeEmploymentHistoryJobTitleAssignment.cs ===
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+public class EmployeeEmploymentHistoryJobTitleAssignment: BaseEntity
+{
+    public int EmploymentHistoryId {get;set;}
+    public EmployeeEmploymentHistory EmploymentHistory {get;set;}
+    public int JobTitleId {get;set;}
+    public JobTitle JobTitle {get;set;}
+    public int? PrincipalDepartmentId {get;set;}
+    public Department? Department {get;set;}
+    public DateTime Start {get;set;}= DateTime.UtcNow;
+    public DateTime? End {get;set;}
+
+}
+
+=== src/Domain/Entities/EmployeeAggregate/EmployeeEmploymentHistory.cs ===
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+public class EmployeeEmploymentHistory: BaseEntity
+{
+    public int EmployeeId {get;set;}
+    public DateTime Start {get;set;}=DateTime.UtcNow;
+    public DateTime? End {get;set;}
+    public Employee Employee {get;set;}
+    public ICollection<EmployeeEmploymentHistoryJobTitleAssignment> JobTitleAssignments {get;set;}=[];
+    //public ICollection<EmployeeUser> EmployeeUsers {get;set;}=[];
+}
+
+=== src/Domain/Entities/EmployeeAggregate/EmployeeAddress.cs ===
+
+using WZCNet.src.Domain.Common;
+
+namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+public class EmployeeAddress: BaseEntity
+{
+    public int EmployeeId {get; private set;}
+    public string StreetName { get; private set;}
+    public string HouseNumber { get; private set;}
+    public string ZipCode { get; private set;}
+    public string Municipality { get; private set; }
+    public DateOnly? Until { get; private set; }
+    public Employee  Employee {get;set;}
+   
+    private EmployeeAddress() { }
+
+    public static Result<EmployeeAddress> Create(string streetName, string houseNumber, 
+        string zipCode, string municipality, DateOnly? until)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(streetName, nameof(streetName));
+        ArgumentException.ThrowIfNullOrEmpty(houseNumber, nameof(houseNumber));
+        ArgumentException.ThrowIfNullOrEmpty(zipCode, nameof(zipCode));
+        ArgumentException.ThrowIfNullOrEmpty(municipality, nameof(municipality));
+
+        if (until.HasValue)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            if (until.Value < today.AddYears(-100) || until.Value > today.AddYears(100))
+                return Result<EmployeeAddress>.Failure("'Until' datum moet tussen 100 jaar geleden en 100 jaar in de toekomst liggen.");
+        }
+        return Result<EmployeeAddress>.Success(new EmployeeAddress 
+        { 
+            
+            StreetName = streetName.Trim(),
+            HouseNumber = houseNumber.Trim(),
+            ZipCode = zipCode.Trim(),
+            Municipality = municipality.Trim(),
+            Until = until
+        });
+    }
+}
+=== src/Domain/Entities/ContactType.cs ===
+namespace WZCNet.src.Domain.Entities;
+
+public class ContactType: BaseEntity
+{
+    public string TypeOfContact {get;set;}
+}
+
+=== src/Domain/Entities/Department.cs ===
+using System;
+
+namespace WZCNet.src.Domain.Entities;
+
+public class Department:BaseEntity
+{
+    public string DepartmentName {get;set;}
+}
+
+=== src/Domain/Entities/Room.cs ===
+using System;
+
+namespace WZCNet.src.Domain.Entities;
+
+public class Room: BaseEntity
+{
+    public string RoomName {get;set;}
+    public int? DepartmentId {get;set;}
+    public Department? Department {get;set;}
+    public int FloorId {get;set;}
+    public Floor Floor {get;set;}
+    public bool CanHaveResident {get;set;}
+}
+
+=== src/Domain/Entities/Refreshtoken.cs ===
+using WZCNet.src.Domain.ValueObjects;
+using System.Security.Cryptography;
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+namespace WZCNet.src.Domain.Entities;
+
+public class Refreshtoken: BaseEntity
+{
+    public string RefreshToken {get; private set;}
+    public DateTime ValidUntil {get;private set;}
+    public SessionInfo Device {get; private set;}
+  
+    public int AppUserId {get;private set;}
+    public int? EmployeeId {get;private set;}
+    public AppUser AppUser {get;private set;}
+    public Employee? Employee {get;private set;}
+
+    public static Refreshtoken Create(int userId, SessionInfo info, int? employeeId)
+    {
+        var randomNumber = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomNumber);
+        return new Refreshtoken
+        {
+            RefreshToken = Convert.ToBase64String(randomNumber),
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+            AppUserId = userId,
+            Device = info,
+            EmployeeId = employeeId
+        };
+    }
+    public bool IsValid() => DeletedAt == null && DateTime.UtcNow < ValidUntil; 
+
+    public void Invalidate()
+    {
+        DeletedAt = DateTime.UtcNow;
+    }
+}
+
+=== src/Domain/Entities/JobTitle.cs ===
+
+namespace WZCNet.src.Domain.Entities;
+
+public class JobTitle: BaseEntity
+{
+    public string JobTitleString {get;private set;}
+
+    private readonly List<JobTitlePermissions> _jobTitlePermissions = [];
+    public virtual IReadOnlyCollection<JobTitlePermissions> JobTitlePermissions =>_jobTitlePermissions.AsReadOnly();
+
+    //TODO Methods for Permissions
+}
+
+=== src/Domain/Entities/Floor.cs ===
+namespace WZCNet.src.Domain.Entities;
+public class Floor:BaseEntity
+{
+    public string FloorName {get;set;}
+}
+=== src/Domain/Entities/AppUserEmployee.cs ===
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
+using WZCNet.src.Domain.Interfaces;
+
+namespace WZCNet.src.Domain.Entities;
+
+public class AppUserEmployee:BaseEntity
+{
+    public int EmployeeId {get;set;}
+    public int AppUsersId {get;set;}
+    public Employee Employee {get;set;}
+    public AppUser AppUser {get;set;}
+}
+=== src/Domain/Entities/JobTitlePermissions.cs ===
+
+namespace WZCNet.src.Domain.Entities;
+
+public class JobTitlePermissions: BaseEntity
+{
+    public int JobTitleId {get;set;}
+    public int PermissionId {get;set;}
+
+    // navigational Properties
+    public Permission Permission {get;set;}
+    public JobTitle JobTitle {get;set;}
+}
+
+=== src/Domain/Entities/AppUser.cs ===
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.SignalR;
+using WZCNet.src.Domain.Common;
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
+using WZCNet.src.Domain.ValueObjects;
+
+namespace WZCNet.src.Domain.Entities;
+
+public class AppUser : BaseEntity
+{
+    public string UserName { get; set; }
+    public string PasswordHash { get; set; }
+    public bool IsPersonalAccount { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int NumberOfFailedLoginAttempts { get; set; }
+    public DateTime? LastLogin { get; set; }
+    public DateTime? PasswordLastChangedAt { get; set; }
+    public ICollection<Refreshtoken> Refreshtokens { get; set; } = [];
+    public ICollection<Employee> Employees { get; set; } = [];
+
+    private AppUser() { }
+    public static Result<AppUser> Create(string userName, string passwordHash, bool IsPersonalAccount = false)
+    {
+        // Validate required parameters
+        if (string.IsNullOrWhiteSpace(userName)) return Result<AppUser>.Failure("username kan niet null of leeg zijn");
+
+        if (string.IsNullOrWhiteSpace(passwordHash)) return Result<AppUser>.Failure("paswoordhash kan niet leeg of null zijn");
+        var user = new AppUser
+        {
+            UserName = userName,
+            PasswordHash = passwordHash,
+            IsPersonalAccount = IsPersonalAccount
+        };
+        return Result<AppUser>.Success(user);
+    }
+
+    public void RegisterSuccessfulLogin()
+    {
+        LastLogin = DateTime.UtcNow;
+        NumberOfFailedLoginAttempts = 0;
+    }
+
+    public void IncrementNumberOfFailedLoginAttempts()
+    {
+        NumberOfFailedLoginAttempts++;
+    }
+
+
+}
+=== src/Domain/Entities/ServiceOrderAggregate/ServiceOrder.cs ===
+using System;
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+namespace WZCNet.src.Domain.Entities.ServiceOrderAggregate;
+
+public class ServiceOrder:BaseEntity
+{
+    public int? CreateByEmployeeId {get;set;}
+    public Employee? CreatedByEmployee {get;set;}
+    public int RoomId {get;set;}
+    public Room Room {get;set;}
+    public string Problem {get;set;}
+    public int StatusId {get;set;}
+    public ServiceOrderStatus Status {get;set;}
+    public ICollection<ServiceOrderComment> Comments {get;set;}=[];
+}
+
+=== src/Domain/Entities/ServiceOrderAggregate/ServiceOrderStatus.cs ===
+using System;
+
+namespace WZCNet.src.Domain.Entities.ServiceOrderAggregate;
+
+public class ServiceOrderStatus: BaseEntity
+{
+    public string Status {get;set;}
+}
+
+=== src/Domain/Entities/ServiceOrderAggregate/ServiceOrderComment.cs ===
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
+
+namespace WZCNet.src.Domain.Entities.ServiceOrderAggregate;
+public class ServiceOrderComment:BaseEntity
+{
+    public string Comment {get;set;}
+    public int ServiceOrderId {get;set;}
+    public ServiceOrder ServiceOrder{get;set;}
+    public int AuthorId {get;set;}
+    public Employee Author {get;set;}
+    
+}
+=== src/Domain/Common/Result.cs ===
+using System;
+
+namespace WZCNet.src.Domain.Common;
+
+public class Result<T>
+{
+    public T? Value {get;}
+    public string? Error {get;}
+    public bool IsSuccess => Error == null;
+
+    protected Result(T? value,string? error)
+    {
+        Value = value;
+        Error = error;
+    }
+
+    public static Result<T> Success(T value)=>new(value,null);
+    public static Result<T> Failure(string error)=>new(default,error);
+}
+
+=== src/Domain/ValueObjects/Name.cs ===
+
+using WZCNet.src.Domain.Common;
+
+namespace WZCNet.src.Domain.ValueObjects;
+
+public sealed class Name
+{
+    public string First {get;}
+    public string Last {get;}
+
+    public static Result<Name> Create(string first, string last)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(first, nameof(first));
+        ArgumentException.ThrowIfNullOrEmpty(last, nameof(last));
+
+        return Result<Name>.Success(new Name(first.Trim(),last.Trim()));
+    }
+
+    private Name(string first, string last)
+    {
+        First = first;
+        Last = last;
+    }
+}
+
+=== src/Domain/ValueObjects/SessionInfo.cs ===
+
+namespace WZCNet.src.Domain.ValueObjects;
+
+public  class SessionInfo
+{
+    public string? DeviceInfo {get;}
+    public string? IpAddress {get;}
+    private SessionInfo(){}
+    private SessionInfo(string? device, string? ip)
+    {
+        DeviceInfo = device;
+        IpAddress = ip;
+    }
+
+    public static SessionInfo Create(string? device, string? ip) => new(device,ip);
+
+}
+
+=== src/Domain/Interfaces/IAuditable.cs ===
+namespace WZCNet.src.Domain.Interfaces;
+public interface IAuditable
+{
+    public DateTime CreatedAt {get;set;}
+    public DateTime? UpdatedAt {get;set;}
+}
+=== src/Domain/Interfaces/ISoftDeletable.cs ===
+namespace WZCNet.src.Domain.Interfaces;
+public interface ISoftDeletable
+{
+    DateTime? DeletedAt {get;set;}
+}
+=== src/Domain/Interfaces/IUserService.cs ===
+using System;
+using WZCNet.src.Application.DTOs.Requests.Auth;
+using WZCNet.src.Application.DTOs.Responses;
+using WZCNet.src.Domain.Common;
+using WZCNet.src.Domain.Entities;
+
+namespace WZCNet.src.Domain.Interfaces;
+
+public interface IUserService
+{
+    Task<Result<AppUser>> Register(LoginRequestDto request);
+
+    Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto);
+    
+    Task<Result<LoginResponseDto>> Refresh(RefreshRequestDto request);
+    
+    string HashPassword(string password);
+
+    Task<Result<LoginResponseDto>> Identify(int accountId, IdentifyRequestDto request);
+
+
+}
+
 === src/Infrastructure/http/RequestContext.cs ===
 using System;
 using WZCNet.src.Application.Interfaces;
@@ -1569,6 +1584,24 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbCont
 
 }
 
+=== src/Infrastructure/Persistence/Configurations/RefreshtokenConfiguration.cs ===
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using WZCNet.src.Domain.Entities;
+
+namespace WZCNet.src.Infrastructure.Persistence.Configurations;
+
+public class RefreshtokenConfiguration : IEntityTypeConfiguration<Refreshtoken>
+{
+    public void Configure(EntityTypeBuilder<Refreshtoken> builder)
+    {
+       builder.OwnsOne(r=>r.Device, deviceBuilder =>
+       {
+           deviceBuilder.Property(d=>d.DeviceInfo).IsRequired(false);
+           deviceBuilder.Property(d=>d.IpAddress).IsRequired(false);
+       });
+    }
+}
 === src/Infrastructure/Persistence/Configurations/AppUserConfiguration.cs ===
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -1589,23 +1622,21 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         });
     }
 }
-=== src/Infrastructure/Persistence/Configurations/RefreshtokenConfiguration.cs ===
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
+=== src/Infrastructure/Persistence/Repositories/UnitOfWork.cs ===
+using WZCNet.src.Application.Interfaces.Repositories;
 using WZCNet.src.Domain.Entities;
+using WZCNet.src.Infrastructure.Persistence.Contexts;
 
-namespace WZCNet.src.Infrastructure.Persistence.Configurations;
+namespace WZCNet.src.Infrastructure.Persistence.Repositories;
 
-public class RefreshtokenConfiguration : IEntityTypeConfiguration<Refreshtoken>
+public class UnitOfWork(WZCNetDbContext context) : IUnitOfWork
 {
-    public void Configure(EntityTypeBuilder<Refreshtoken> builder)
-    {
-       builder.OwnsOne(r=>r.Device, deviceBuilder =>
-       {
-           deviceBuilder.Property(d=>d.DeviceInfo).IsRequired(false);
-           deviceBuilder.Property(d=>d.IpAddress).IsRequired(false);
-       });
-    }
+    public void Add<T>(T entity) where T : BaseEntity => context.Set<T>().Add(entity);
+
+    public void Remove<T>(T entity) where T : BaseEntity => context.Set<T>().Remove(entity);
+
+    public async Task SaveChangesAsync() => await context.SaveChangesAsync();
+    
 }
 === src/Infrastructure/Persistence/Repositories/UserAccountRepository.cs ===
 using System;
@@ -1649,19 +1680,3 @@ public class UserAccountRepository(WZCNetDbContext context) : IUserAccountReposi
 
 }
 
-=== src/Infrastructure/Persistence/Repositories/UnitOfWork.cs ===
-using WZCNet.src.Application.Interfaces.Repositories;
-using WZCNet.src.Domain.Entities;
-using WZCNet.src.Infrastructure.Persistence.Contexts;
-
-namespace WZCNet.src.Infrastructure.Persistence.Repositories;
-
-public class UnitOfWork(WZCNetDbContext context) : IUnitOfWork
-{
-    public void Add<T>(T entity) where T : BaseEntity => context.Set<T>().Add(entity);
-
-    public void Remove<T>(T entity) where T : BaseEntity => context.Set<T>().Remove(entity);
-
-    public async Task SaveChangesAsync() => await context.SaveChangesAsync();
-    
-}

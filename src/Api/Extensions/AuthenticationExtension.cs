@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using WZCNet.src.Domain.Entities;
+using WZCNet.src.Domain.Entities.EmployeeAggregate;
 
 namespace WZCNet.src.Api.Extensions;
 public static class AuthenticationExtension

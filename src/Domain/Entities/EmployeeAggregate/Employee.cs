@@ -24,11 +24,11 @@ public class Employee : BaseEntity
     public ICollection<AppUser> AppUsers {get;set;}=[];
 
     private Employee() { }
-    public static Result<Employee> Create(string firstName, string lastName, DateOnly dateOfBirth, string pinHash, IEnumerable<EmployeeAddress> addresses)
+    public static Result<Employee> Create(string firstName, string lastName, DateOnly dateOfBirth, string pin, IEnumerable<EmployeeAddress> addresses)
     {
         ArgumentException.ThrowIfNullOrEmpty(firstName, nameof(firstName));
         ArgumentException.ThrowIfNullOrEmpty(lastName, nameof(lastName));
-        ArgumentException.ThrowIfNullOrWhiteSpace(pinHash, nameof(pinHash));
+        ArgumentException.ThrowIfNullOrWhiteSpace(pin, nameof(pin));
 
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -55,7 +55,7 @@ public class Employee : BaseEntity
             FirstName = nameResult.Value.First,
             LastName = nameResult.Value.Last,
             DateOfBirth = dateOfBirth,
-            Pin = EmployeeAuthentication.Create(pinHash),
+            Pin = EmployeeAuthentication.Create(pin),
             Addresses = [.. addresses]
         };
 

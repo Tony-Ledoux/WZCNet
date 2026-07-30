@@ -15,7 +15,7 @@ Accept: application/json
 Content-Type: application/json
 
 {
-    "userName":"afd1@halmolen.be",
+    "userName":"afd0@halmolen.be",
     "password":"12345"
 }
 
@@ -31,13 +31,13 @@ Content-Type: application/json
 
 ###
 POST {{WZCNet_HostAddress}}/api/auth/identify
-Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWZkMUBoYWxtb2xlbi5iZSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWVpZGVudGlmaWVyIjoiMiIsIkVtcGxveWVlSWQiOiIiLCJFbXBsb3llZU5hbWUiOiIiLCJleHAiOjE3ODUzMTc2MDksImlzcyI6IldaQ05FVC1CQUNLRU5EIiwiYXVkIjoiV1pDTkVULUZST05URU5EIn0.mheDjtaRs9D0M_f-WcAH4UBrswX7s61c1VFLnZXCVvs0gDr-6p-3Do2wzbSOEpM8T0oqsfO6jVKewiWpCOSrCA
+Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWZkMEBoYWxtb2xlbi5iZSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWVpZGVudGlmaWVyIjoiMSIsIkVtcGxveWVlSWQiOiIiLCJFbXBsb3llZU5hbWUiOiIiLCJleHAiOjE3ODUzMzk2NjMsImlzcyI6IldaQ05FVC1CQUNLRU5EIiwiYXVkIjoiV1pDTkVULUZST05URU5EIn0.HDNP8oJHwX5n8HuAjsH5Tde-3SUpMqnncMYGfyZie_ntpHdEBqKwf7mhGWf6Zj7S6P56IWzXisA_jf_fiFYQ6Q
 Accept: application/json
 Content-Type: application/json
 
 {
-    "employeeId":"1",
-    "pin":"mc18Hw8X6qVlrxwyrNKqhBe75ufE06FgNTlQ9Gsz0eA="
+    "employeeId":"2",
+    "pin":"1234"
 }
 
 ###

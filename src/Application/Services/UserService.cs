@@ -126,6 +126,30 @@ public class UserService(
 
     public async Task<Result<LoginResponseDto>> Identify(int accountId, IdentifyRequestDto request)
     {
-        return Result<LoginResponseDto>.Success(new LoginResponseDto{AccessToken="test",RefreshToken="test"});
+        var user = await repo.GetAppUserByIdAsync(accountId);
+        if(user == null) return Result<LoginResponseDto>.Failure("Account bestaat niet.");
+        var employee = await GetEmployeeByIdFromUser(user, request.EmployeeId);
+        if(employee == null) return Result<LoginResponseDto>.Failure("Werknemer bestaat niet");
+        if(employee.Pin == null || !employee.Pin.ValidatePin(request.Pin)) return Result<LoginResponseDto>.Failure("Geen of onjuiste pin");
+        employee.Pin.MarkAsUsed();
+        //get the current refreshtoken
+        var sessionInfo = SessionInfo.Create(rc.DeviceInfo, rc.IpAddress);
+        var refreshtoken = await repo.GetRefreshtokenByAccountIdAndSessionInfoAsync(accountId, sessionInfo);
+        if(refreshtoken != null)
+        {
+            refreshtoken.AttachEmployee(employee);
+            await dbActions.SaveChangesAsync();
+        }else
+        {
+            refreshtoken = Refreshtoken.Create(accountId,sessionInfo,employee.Id);
+            dbActions.Add(refreshtoken);
+            await dbActions.SaveChangesAsync();
+        }
+        var response = new LoginResponseDto
+        {
+            RefreshToken = refreshtoken.RefreshToken,
+            AccessToken= await CreateJWT(user,employee)
+        };
+        return Result<LoginResponseDto>.Success(response);
     }
 }
