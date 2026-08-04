@@ -11,8 +11,10 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IUserService,UserService>();
+        services.AddScoped<IEmployeeService,EmployeeService>();
         services.AddScoped<IUnitOfWork,UnitOfWork>();
         services.AddScoped<IUserAccountRepository,UserAccountRepository>();
+        services.AddScoped<IEmployeeRepository,EmployeeRepository>();
         
 
         return services;

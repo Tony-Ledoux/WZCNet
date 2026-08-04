@@ -1,9 +1,10 @@
 using System;
 using WZCNet.src.Domain.Entities.EmployeeAggregate;
+using WZCNet.src.Domain.Interfaces;
 
 namespace WZCNet.src.Domain.Entities.ServiceOrderAggregate;
 
-public class ServiceOrder:BaseEntity
+public class ServiceOrder:BaseEntity,  IAggregateRoot
 {
     public int? CreateByEmployeeId {get;set;}
     public Employee? CreatedByEmployee {get;set;}

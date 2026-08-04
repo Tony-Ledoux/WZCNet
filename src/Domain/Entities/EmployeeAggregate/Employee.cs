@@ -1,10 +1,11 @@
 using WZCNet.src.Domain.Common;
+using WZCNet.src.Domain.Interfaces;
 using WZCNet.src.Domain.ValueObjects;
 
 
 namespace WZCNet.src.Domain.Entities.EmployeeAggregate;
 
-public class Employee : BaseEntity
+public class Employee : BaseEntity, IAggregateRoot
 {
     public string FirstName { get; private set; }
     public string LastName { get; private set; }

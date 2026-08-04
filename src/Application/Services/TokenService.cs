@@ -18,7 +18,8 @@ public class TokenService(IConfiguration configuration) : ITokenService
               new Claim(ClaimTypes.Name ,user.UserName),
               new Claim(ClaimTypes.NameIdentifier, user.UserAccountId.ToString()),
               new Claim("EmployeeId", user.EmployeeId?.ToString()??""),
-              new Claim("EmployeeName", user.EmployeeName??"")
+              new Claim("EmployeeName", user.EmployeeName??""),
+              new Claim("RequiresPinChange", user.RequiresPinChange.ToString())
             };
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(configuration.GetValue<string>("AppSettings:Token")!)

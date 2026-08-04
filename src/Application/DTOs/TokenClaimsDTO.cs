@@ -8,4 +8,5 @@ public class TokenClaimsDTO
     public int UserAccountId {get;set;}
     public string? EmployeeName{get;set;}
     public int? EmployeeId {get;set;}
+    public bool RequiresPinChange {get;set;}
 }

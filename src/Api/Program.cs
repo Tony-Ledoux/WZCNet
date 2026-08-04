@@ -9,6 +9,7 @@ using WZCNet.src.Application.Extensions;
 using WZCNet.src.Api.Extensions;
 using WZCNet.src.Infrastructure.http;
 using WZCNet.src.Application.Interfaces;
+using WZCNet.src.Infrastructure.Middleware;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +35,7 @@ var app = builder.Build();
 app.UseMiddleware<RequestContextMiddleware>();
 // Configure the HTTP request pipeline.
 app.UseAuthentication();
+app.UseMiddleware<PinChangeRequiredMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
