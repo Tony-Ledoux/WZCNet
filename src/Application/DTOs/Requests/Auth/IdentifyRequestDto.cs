@@ -1,7 +1,11 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace WZCNet.src.Application.DTOs.Requests.Auth;
 public class IdentifyRequestDto
 {
-    public required int EmployeeId {get;set;}
-    public required string Pin {get;set;}=string.Empty;
+    [Required]
+    public int EmployeeId {get;set;}
+    [Required]
+    public string Pin {get;set;}=string.Empty;
 
 }

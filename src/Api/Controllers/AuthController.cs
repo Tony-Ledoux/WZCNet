@@ -42,12 +42,14 @@ namespace WZCNet.src.Api.Controllers
         [HttpPost("identify")]
         public async Task<IActionResult> Identify(IdentifyRequestDto request)
         {
+  
             var employeeIdClaim = User.FindFirstValue("EmployeeId");
             if (!string.IsNullOrEmpty(employeeIdClaim)) return BadRequest("Account is al geïdentificeerd");
             var accountId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var result = await us.Identify(accountId, request);
             if (!result.IsSuccess) return BadRequest(result.Error);
             return Ok(result.Value);
+           
         }
         
         [Authorize]

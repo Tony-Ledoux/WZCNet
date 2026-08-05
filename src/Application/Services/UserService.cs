@@ -61,12 +61,27 @@ public class UserService(
 
     }
 
-    private async Task<Employee?> GetEmployeeByIdFromUser(AppUser user, int? employeeId)
+    private async Task<Employee?> ResolveEmployeeForUser(AppUser user, int? employeeId)
     {
-        if(user == null) return null;
-        if(user.IsPersonalAccount && user.Employees.Count == 1) return user.Employees.First();
-        if(employeeId.HasValue) return user.Employees.FirstOrDefault(e=> e.Id == employeeId.Value);
-        return null;
+        var singleId = user.GetSingleEmployeeId();
+        if(singleId.HasValue) return await employeeRepo.GetEmployeeByIdAsync(singleId.Value.Value);
+        if(!employeeId.HasValue) return null;
+        var linked = user.EmployeeLinks.FirstOrDefault(link=> link.EmployeeId.Value == employeeId.Value);
+        return linked is null ? null : await employeeRepo.GetEmployeeByIdAsync(linked.EmployeeId.Value);
+    }
+
+        public async Task<Result<AppUser>> Register(LoginRequestDto request)
+    {
+        // check for duplicate
+        if(await userRepo.UserExists(request.UserName)) return Result<AppUser>.Failure("gebruiker bestaat al");
+        var user = AppUser.Create(request.UserName,HashPassword(request.Password),request.IsPersonalAccount ?? false);
+        if(!user.IsSuccess) return user;
+
+        // save to the database
+        dbActions.Add(user.Value);
+        await dbActions.SaveChangesAsync();
+        return user;
+
     }
 
     public async Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto)
@@ -83,12 +98,14 @@ public class UserService(
         }
         //check if there is a refreshtoken
         var sessionInfo = SessionInfo.Create(rc.DeviceInfo, rc.IpAddress);
-        var employeeId = user.GetSingleEmployeeId();
-        var employee = await GetEmployeeByIdFromUser(user, employeeId);
-        var response = new LoginResponseDto();
+        var employee = await ResolveEmployeeForUser(user,employeeId: null);
         user.RegisterSuccessfulLogin();
-        response.RefreshToken = await HandleToken(user.Id,sessionInfo,employee?.Id);
-        response.AccessToken = await CreateJWT(user,employee);
+        var response = new LoginResponseDto
+        {
+            RefreshToken = await HandleToken(user.Id,sessionInfo,employee?.Id),
+            AccessToken = await CreateJWT(user,employee)
+            
+        };
         await dbActions.SaveChangesAsync();
         return Result<LoginResponseDto>.Success(response);
     }
@@ -113,25 +130,14 @@ public class UserService(
         return Result<LoginResponseDto>.Success(response);
     }
 
-    public async Task<Result<AppUser>> Register(LoginRequestDto request)
-    {
-        // check for duplicate
-        if(await userRepo.UserExists(request.UserName)) return Result<AppUser>.Failure("gebruiker bestaat al");
-        var user = AppUser.Create(request.UserName,HashPassword(request.Password),request.IsPersonalAccount ?? false);
-        if(!user.IsSuccess) return user;
 
-        // save to the database
-        dbActions.Add(user.Value);
-        await dbActions.SaveChangesAsync();
-        return user;
-
-    }
 
     public async Task<Result<LoginResponseDto>> Identify(int accountId, IdentifyRequestDto request)
     {
+
         var user = await userRepo.GetAppUserByIdAsync(accountId);
         if(user == null) return Result<LoginResponseDto>.Failure("Account bestaat niet.");
-        var employee = await GetEmployeeByIdFromUser(user, request.EmployeeId);
+        var employee = await ResolveEmployeeForUser(user, request.EmployeeId);
         if(employee == null) return Result<LoginResponseDto>.Failure("Werknemer bestaat niet");
         if(employee.Pin == null || !employee.Pin.ValidatePin(request.Pin)) return Result<LoginResponseDto>.Failure("Geen of onjuiste pin");
         //get the current refreshtoken
@@ -140,13 +146,13 @@ public class UserService(
         if(refreshtoken != null)
         {
             refreshtoken.AttachEmployee(employee);
-            await dbActions.SaveChangesAsync();
+
         }else
         {
             refreshtoken = Refreshtoken.Create(accountId,sessionInfo,employee.Id);
             dbActions.Add(refreshtoken);
-            await dbActions.SaveChangesAsync();
         }
+        await dbActions.SaveChangesAsync();
         var response = new LoginResponseDto
         {
             RefreshToken = refreshtoken.RefreshToken,
@@ -159,10 +165,11 @@ public class UserService(
     {
 
         var user = await userRepo.GetAppUserByIdAsync(userId);
-        var employee = await employeeRepo.GetEmployeeByIdAsync(employeeId);
         if(user == null) return Result<AppUser>.Failure("Geen gebruiker gevonden");
+        var employee = await employeeRepo.GetEmployeeByIdAsync(employeeId);
         if(employee == null) return Result<AppUser>.Failure("Geen Werknemer gevonden");
-        var result = user.AddEmployee(employee);
+        if(!employee.IsCurrentlyEmployed(DateTime.UtcNow)) return Result<AppUser>.Failure("Deze werknemer is niet langer in dienst");
+        var result = user.AddEmployee(new EmployeeId(employee.Id));
         if (!result.IsSuccess) return Result<AppUser>.Failure(result.Error);
         await dbActions.SaveChangesAsync();
         return Result<AppUser>.Success(user);
@@ -171,10 +178,8 @@ public class UserService(
     public async Task<Result<AppUser>> RemoveEmployeeFromUser(int employeeId, int userId)
     {
         var user = await userRepo.GetAppUserByIdAsync(userId);
-        var employee = await employeeRepo.GetEmployeeByIdAsync(employeeId);
         if(user == null) return Result<AppUser>.Failure("Geen gebruiker gevonden");
-        if(employee == null) return Result<AppUser>.Failure("Geen Werknemer gevonden");
-        var result = user.RemoveEmployee(employee);
+        var result = user.RemoveEmployee(new EmployeeId(employeeId));
         if (!result.IsSuccess) return Result<AppUser>.Failure(result.Error);
         await dbActions.SaveChangesAsync();
         return Result<AppUser>.Success(user);

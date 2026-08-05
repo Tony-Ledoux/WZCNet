@@ -8,5 +8,5 @@ public interface IEmployeeRepository
 {
     
     Task<Employee?> GetEmployeeByIdAsync(int id);
-    
+    Task<Employee?> GetEmployeeByIdWithEmploymentHistoryAsync(int id);
 }

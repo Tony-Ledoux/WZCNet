@@ -157,8 +157,8 @@ namespace WZCNet.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    EmployeeId = table.Column<int>(type: "integer", nullable: false),
-                    AppUsersId = table.Column<int>(type: "integer", nullable: false),
+                    AppUserId = table.Column<int>(type: "integer", nullable: false),
+                    EmployeeRawId = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -167,14 +167,14 @@ namespace WZCNet.Migrations
                 {
                     table.PrimaryKey("PK_AppUserEmployee", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_AppUserEmployee_AppUsers_AppUsersId",
-                        column: x => x.AppUsersId,
+                        name: "FK_AppUserEmployee_AppUsers_AppUserId",
+                        column: x => x.AppUserId,
                         principalTable: "AppUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_AppUserEmployee_Employees_EmployeeId",
-                        column: x => x.EmployeeId,
+                        name: "FK_AppUserEmployee_Employees_EmployeeRawId",
+                        column: x => x.EmployeeRawId,
                         principalTable: "Employees",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -208,7 +208,7 @@ namespace WZCNet.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "EmployeeContacts",
+                name: "EmployeeContact",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -222,15 +222,15 @@ namespace WZCNet.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_EmployeeContacts", x => x.Id);
+                    table.PrimaryKey("PK_EmployeeContact", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_EmployeeContacts_ContactTypes_ContactTypeId",
+                        name: "FK_EmployeeContact_ContactTypes_ContactTypeId",
                         column: x => x.ContactTypeId,
                         principalTable: "ContactTypes",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_EmployeeContacts_Employees_EmployeeId",
+                        name: "FK_EmployeeContact_Employees_EmployeeId",
                         column: x => x.EmployeeId,
                         principalTable: "Employees",
                         principalColumn: "Id",
@@ -530,14 +530,15 @@ namespace WZCNet.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_AppUserEmployee_AppUsersId",
+                name: "IX_AppUserEmployee_AppUserId_EmployeeRawId",
                 table: "AppUserEmployee",
-                column: "AppUsersId");
+                columns: new[] { "AppUserId", "EmployeeRawId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_AppUserEmployee_EmployeeId",
+                name: "IX_AppUserEmployee_EmployeeRawId",
                 table: "AppUserEmployee",
-                column: "EmployeeId");
+                column: "EmployeeRawId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContactTypes_TypeOfContact",
@@ -567,13 +568,13 @@ namespace WZCNet.Migrations
                 column: "CreatedForEmployeeId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_EmployeeContacts_ContactTypeId",
-                table: "EmployeeContacts",
+                name: "IX_EmployeeContact_ContactTypeId",
+                table: "EmployeeContact",
                 column: "ContactTypeId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_EmployeeContacts_EmployeeId",
-                table: "EmployeeContacts",
+                name: "IX_EmployeeContact_EmployeeId",
+                table: "EmployeeContact",
                 column: "EmployeeId");
 
             migrationBuilder.CreateIndex(
@@ -703,7 +704,7 @@ namespace WZCNet.Migrations
                 name: "EmployeeComments");
 
             migrationBuilder.DropTable(
-                name: "EmployeeContacts");
+                name: "EmployeeContact");
 
             migrationBuilder.DropTable(
                 name: "EmployeeEmploymentHistoryJobTitleAssignments");

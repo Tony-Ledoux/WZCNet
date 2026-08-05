@@ -13,7 +13,6 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbCont
     public DbSet<Employee> Employees { get; set; }
     public DbSet<EmployeeAddress> EmployeeAddresses {get;set;}
     public DbSet<ContactType> ContactTypes { get; set; }
-    public DbSet<EmployeeContact> EmployeeContacts { get; set; }
     public DbSet<EmployeeEmploymentHistory> EmploymentHistories { get; set; }
     public DbSet<EmployeeEmploymentHistoryJobTitleAssignment> EmployeeEmploymentHistoryJobTitleAssignments {get;set;}
     public DbSet<Permission> Permissions { get; set; }

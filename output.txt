@@ -272,6 +272,14 @@ public class Employee : BaseEntity, IAggregateRoot
     {
         return $"{FirstName} {LastName}";
     }
+
+    public bool IsCurrentlyEmployed(DateTime now)
+    {
+        return EmploymentHistories.Any(history=>
+        history.Start <= now &&
+        (history.End is null || history.End > now)
+        );
+    }
     
     //TODO Add methods to manage contacts
 
@@ -404,16 +412,28 @@ public class ServiceOrderComment:BaseEntity
 }
 === src/Domain/Entities/AppUserEmployee.cs ===
 using WZCNet.src.Domain.Entities.EmployeeAggregate;
-using WZCNet.src.Domain.Interfaces;
+using WZCNet.src.Domain.ValueObjects;
+
 
 namespace WZCNet.src.Domain.Entities;
 
 public class AppUserEmployee:BaseEntity
 {
-    public int EmployeeId {get;set;}
-    public int AppUsersId {get;set;}
-    public Employee Employee {get;set;}
-    public AppUser AppUser {get;set;}
+    public int AppUserId {get;private set;}
+    public int EmployeeRawId {get;private set;}
+    public EmployeeId EmployeeId => new(EmployeeRawId);
+    public AppUser AppUser {get; private set;} = null!;
+    public Employee Employee {get;private set;} = null!;
+
+    private AppUserEmployee(){}
+
+    internal static AppUserEmployee Create(EmployeeId employeeId)
+    {
+        return new AppUserEmployee
+        {
+            EmployeeRawId = employeeId.Value
+        };
+    }
 }
 === src/Domain/Entities/BaseEntity.cs ===
 using System;
@@ -511,13 +531,11 @@ public class Department:BaseEntity
 }
 
 === src/Domain/Entities/AppUser.cs ===
-using System.Security.Cryptography;
-using Microsoft.AspNetCore.SignalR;
-using Npgsql.Replication;
 using WZCNet.src.Domain.Common;
 using WZCNet.src.Domain.Entities.EmployeeAggregate;
 using WZCNet.src.Domain.Interfaces;
 using WZCNet.src.Domain.ValueObjects;
+
 
 namespace WZCNet.src.Domain.Entities;
 
@@ -531,7 +549,8 @@ public class AppUser : BaseEntity, IAggregateRoot
     public DateTime? LastLogin { get; set; }
     public DateTime? PasswordLastChangedAt { get; set; }
     public ICollection<Refreshtoken> Refreshtokens { get; set; } = [];
-    public ICollection<Employee> Employees { get; set; } = [];
+    private readonly List<AppUserEmployee> _employeeLinks=[];
+    public IReadOnlyCollection<AppUserEmployee> EmployeeLinks => _employeeLinks.AsReadOnly();
 
     private AppUser() { }
     public static Result<AppUser> Create(string userName, string passwordHash, bool IsPersonalAccount = false)
@@ -570,29 +589,26 @@ public class AppUser : BaseEntity, IAggregateRoot
         NumberOfFailedLoginAttempts = 0;
     }
 
-    public Result<AppUser> AddEmployee(Employee employee)
+    public Result<AppUser> AddEmployee(EmployeeId employeeId)
     {
-        ArgumentNullException.ThrowIfNull(employee);
-
-        if(IsPersonalAccount && Employees.Count == 1) return Result<AppUser>.Failure("A personal account can hold only one employee");
-        if(Employees.Any(e=>e.Id == employee.Id)) return Result<AppUser>.Failure("This employee is already registered with this account");
-        Employees.Add(employee);
+        if(IsPersonalAccount && _employeeLinks.Count >= 1) return Result<AppUser>.Failure("A personal account can hold only one employee");
+        if(_employeeLinks.Any(link=>link.EmployeeRawId == employeeId.Value)) return Result<AppUser>.Failure("This employee is already registered with this account");
+        _employeeLinks.Add(AppUserEmployee.Create(employeeId));
         return Result<AppUser>.Success(this);
     }
 
-    public Result<AppUser> RemoveEmployee(Employee employee)
+    public Result<AppUser> RemoveEmployee(EmployeeId employeeId)
     {
-        ArgumentNullException.ThrowIfNull(employee);
-        var linked_Employee = Employees.FirstOrDefault(e=>e.Id == employee.Id);
-        if(linked_Employee == null) return Result<AppUser>.Failure("This employee is not registered with this account");
-        Employees.Remove(linked_Employee);
+        var link = _employeeLinks.FirstOrDefault(link => link.EmployeeRawId == employeeId.Value);
+        if(link is null) return Result<AppUser>.Failure("This employee is not registered with this account");
+        _employeeLinks.Remove(link);
         return Result<AppUser>.Success(this);
     }
 
-    public int? GetSingleEmployeeId()
+    public EmployeeId? GetSingleEmployeeId()
 {
-    if (IsPersonalAccount && Employees.Count == 1)
-        return Employees.First().Id;
+    if (IsPersonalAccount && _employeeLinks.Count == 1)
+        return _employeeLinks[0].EmployeeId;
     return null;
 }
 
@@ -618,6 +634,11 @@ public class Result<T>
     public static Result<T> Success(T value)=>new(value,null);
     public static Result<T> Failure(string error)=>new(default,error);
 }
+
+=== src/Domain/ValueObjects/EmployeeId.cs ===
+
+namespace WZCNet.src.Domain.ValueObjects;
+public readonly record struct EmployeeId(int Value);
 
 === src/Domain/ValueObjects/SessionInfo.cs ===
 
@@ -741,12 +762,14 @@ namespace WZCNet.src.Api.Controllers
         [HttpPost("identify")]
         public async Task<IActionResult> Identify(IdentifyRequestDto request)
         {
+  
             var employeeIdClaim = User.FindFirstValue("EmployeeId");
             if (!string.IsNullOrEmpty(employeeIdClaim)) return BadRequest("Account is al geïdentificeerd");
             var accountId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var result = await us.Identify(accountId, request);
             if (!result.IsSuccess) return BadRequest(result.Error);
             return Ok(result.Value);
+           
         }
         
         [Authorize]
@@ -865,7 +888,7 @@ public interface IEmployeeRepository
 {
     
     Task<Employee?> GetEmployeeByIdAsync(int id);
-    
+    Task<Employee?> GetEmployeeByIdWithEmploymentHistoryAsync(int id);
 }
 
 === src/Application/Services/UserService.cs ===
@@ -932,12 +955,27 @@ public class UserService(
 
     }
 
-    private async Task<Employee?> GetEmployeeByIdFromUser(AppUser user, int? employeeId)
+    private async Task<Employee?> ResolveEmployeeForUser(AppUser user, int? employeeId)
     {
-        if(user == null) return null;
-        if(user.IsPersonalAccount && user.Employees.Count == 1) return user.Employees.First();
-        if(employeeId.HasValue) return user.Employees.FirstOrDefault(e=> e.Id == employeeId.Value);
-        return null;
+        var singleId = user.GetSingleEmployeeId();
+        if(singleId.HasValue) return await employeeRepo.GetEmployeeByIdAsync(singleId.Value.Value);
+        if(!employeeId.HasValue) return null;
+        var linked = user.EmployeeLinks.FirstOrDefault(link=> link.EmployeeId.Value == employeeId.Value);
+        return linked is null ? null : await employeeRepo.GetEmployeeByIdAsync(linked.EmployeeId.Value);
+    }
+
+        public async Task<Result<AppUser>> Register(LoginRequestDto request)
+    {
+        // check for duplicate
+        if(await userRepo.UserExists(request.UserName)) return Result<AppUser>.Failure("gebruiker bestaat al");
+        var user = AppUser.Create(request.UserName,HashPassword(request.Password),request.IsPersonalAccount ?? false);
+        if(!user.IsSuccess) return user;
+
+        // save to the database
+        dbActions.Add(user.Value);
+        await dbActions.SaveChangesAsync();
+        return user;
+
     }
 
     public async Task<Result<LoginResponseDto>> Login(LoginRequestDto requestDto)
@@ -954,12 +992,14 @@ public class UserService(
         }
         //check if there is a refreshtoken
         var sessionInfo = SessionInfo.Create(rc.DeviceInfo, rc.IpAddress);
-        var employeeId = user.GetSingleEmployeeId();
-        var employee = await GetEmployeeByIdFromUser(user, employeeId);
-        var response = new LoginResponseDto();
+        var employee = await ResolveEmployeeForUser(user,employeeId: null);
         user.RegisterSuccessfulLogin();
-        response.RefreshToken = await HandleToken(user.Id,sessionInfo,employee?.Id);
-        response.AccessToken = await CreateJWT(user,employee);
+        var response = new LoginResponseDto
+        {
+            RefreshToken = await HandleToken(user.Id,sessionInfo,employee?.Id),
+            AccessToken = await CreateJWT(user,employee)
+            
+        };
         await dbActions.SaveChangesAsync();
         return Result<LoginResponseDto>.Success(response);
     }
@@ -984,25 +1024,14 @@ public class UserService(
         return Result<LoginResponseDto>.Success(response);
     }
 
-    public async Task<Result<AppUser>> Register(LoginRequestDto request)
-    {
-        // check for duplicate
-        if(await userRepo.UserExists(request.UserName)) return Result<AppUser>.Failure("gebruiker bestaat al");
-        var user = AppUser.Create(request.UserName,HashPassword(request.Password),request.IsPersonalAccount ?? false);
-        if(!user.IsSuccess) return user;
 
-        // save to the database
-        dbActions.Add(user.Value);
-        await dbActions.SaveChangesAsync();
-        return user;
-
-    }
 
     public async Task<Result<LoginResponseDto>> Identify(int accountId, IdentifyRequestDto request)
     {
+
         var user = await userRepo.GetAppUserByIdAsync(accountId);
         if(user == null) return Result<LoginResponseDto>.Failure("Account bestaat niet.");
-        var employee = await GetEmployeeByIdFromUser(user, request.EmployeeId);
+        var employee = await ResolveEmployeeForUser(user, request.EmployeeId);
         if(employee == null) return Result<LoginResponseDto>.Failure("Werknemer bestaat niet");
         if(employee.Pin == null || !employee.Pin.ValidatePin(request.Pin)) return Result<LoginResponseDto>.Failure("Geen of onjuiste pin");
         //get the current refreshtoken
@@ -1011,13 +1040,13 @@ public class UserService(
         if(refreshtoken != null)
         {
             refreshtoken.AttachEmployee(employee);
-            await dbActions.SaveChangesAsync();
+
         }else
         {
             refreshtoken = Refreshtoken.Create(accountId,sessionInfo,employee.Id);
             dbActions.Add(refreshtoken);
-            await dbActions.SaveChangesAsync();
         }
+        await dbActions.SaveChangesAsync();
         var response = new LoginResponseDto
         {
             RefreshToken = refreshtoken.RefreshToken,
@@ -1030,10 +1059,11 @@ public class UserService(
     {
 
         var user = await userRepo.GetAppUserByIdAsync(userId);
-        var employee = await employeeRepo.GetEmployeeByIdAsync(employeeId);
         if(user == null) return Result<AppUser>.Failure("Geen gebruiker gevonden");
+        var employee = await employeeRepo.GetEmployeeByIdAsync(employeeId);
         if(employee == null) return Result<AppUser>.Failure("Geen Werknemer gevonden");
-        var result = user.AddEmployee(employee);
+        if(!employee.IsCurrentlyEmployed(DateTime.UtcNow)) return Result<AppUser>.Failure("Deze werknemer is niet langer in dienst");
+        var result = user.AddEmployee(new EmployeeId(employee.Id));
         if (!result.IsSuccess) return Result<AppUser>.Failure(result.Error);
         await dbActions.SaveChangesAsync();
         return Result<AppUser>.Success(user);
@@ -1042,10 +1072,8 @@ public class UserService(
     public async Task<Result<AppUser>> RemoveEmployeeFromUser(int employeeId, int userId)
     {
         var user = await userRepo.GetAppUserByIdAsync(userId);
-        var employee = await employeeRepo.GetEmployeeByIdAsync(employeeId);
         if(user == null) return Result<AppUser>.Failure("Geen gebruiker gevonden");
-        if(employee == null) return Result<AppUser>.Failure("Geen Werknemer gevonden");
-        var result = user.RemoveEmployee(employee);
+        var result = user.RemoveEmployee(new EmployeeId(employeeId));
         if (!result.IsSuccess) return Result<AppUser>.Failure(result.Error);
         await dbActions.SaveChangesAsync();
         return Result<AppUser>.Success(user);
@@ -1241,11 +1269,15 @@ public class LoginRequestDto
     public bool? IsPersonalAccount {get;set;}
 }
 === src/Application/DTOs/Requests/Auth/IdentifyRequestDto.cs ===
+using System.ComponentModel.DataAnnotations;
+
 namespace WZCNet.src.Application.DTOs.Requests.Auth;
 public class IdentifyRequestDto
 {
-    public required int EmployeeId {get;set;}
-    public required string Pin {get;set;}=string.Empty;
+    [Required]
+    public int EmployeeId {get;set;}
+    [Required]
+    public string Pin {get;set;}=string.Empty;
 
 }
 === src/Application/DTOs/Requests/Auth/RefreshRequestDto.cs ===
@@ -1631,7 +1663,6 @@ public class WZCNetDbContext(DbContextOptions<WZCNetDbContext> options) : DbCont
     public DbSet<Employee> Employees { get; set; }
     public DbSet<EmployeeAddress> EmployeeAddresses {get;set;}
     public DbSet<ContactType> ContactTypes { get; set; }
-    public DbSet<EmployeeContact> EmployeeContacts { get; set; }
     public DbSet<EmployeeEmploymentHistory> EmploymentHistories { get; set; }
     public DbSet<EmployeeEmploymentHistoryJobTitleAssignment> EmployeeEmploymentHistoryJobTitleAssignments {get;set;}
     public DbSet<Permission> Permissions { get; set; }
@@ -1792,12 +1823,6 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
     public void Configure(EntityTypeBuilder<AppUser> builder)
     {
         builder.HasMany(au=>au.Refreshtokens).WithOne(t=>t.AppUser).HasForeignKey(au=>au.AppUserId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasMany(au => au.Employees).WithMany(e => e.AppUsers).UsingEntity<AppUserEmployee>(je =>
-        {
-            je.HasOne(j=>j.Employee).WithMany().HasForeignKey(j=>j.EmployeeId).OnDelete(DeleteBehavior.Cascade);
-            je.HasOne(j=>j.AppUser).WithMany().HasForeignKey(j=>j.AppUsersId).OnDelete(DeleteBehavior.Cascade);
-
-        });
     }
 }
 === src/Infrastructure/Persistence/Configurations/RefreshtokenConfiguration.cs ===
@@ -1818,6 +1843,24 @@ public class RefreshtokenConfiguration : IEntityTypeConfiguration<Refreshtoken>
        });
     }
 }
+=== src/Infrastructure/Persistence/Configurations/AppUserEmployeeConfiguration.cs ===
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using WZCNet.src.Domain.Entities;
+using WZCNet.src.Domain.ValueObjects;
+
+namespace WZCNet.src.Infrastructure.Persistence.Configurations;
+
+public class AppUserEmployeeConfiguration : IEntityTypeConfiguration<AppUserEmployee>
+{
+    public void Configure(EntityTypeBuilder<AppUserEmployee> builder)
+    {
+        builder.Ignore(x => x.EmployeeId);
+        builder.HasIndex(x=>new {x.AppUserId,x.EmployeeRawId}).IsUnique();
+        builder.HasOne(x=>x.AppUser).WithMany().HasForeignKey(x=>x.AppUserId);
+        builder.HasOne(x=>x.Employee).WithMany().HasForeignKey(x=>x.EmployeeRawId);
+    }
+}
 === src/Infrastructure/Persistence/Repositories/UserAccountRepository.cs ===
 using System;
 using Microsoft.EntityFrameworkCore;
@@ -1831,31 +1874,35 @@ namespace WZCNet.src.Infrastructure.Persistence.Repositories;
 
 public class UserAccountRepository(WZCNetDbContext context) : IUserAccountRepository
 {
- 
+
 
     public async Task<AppUser?> GetAppuserByUserName(string userName)
     {
-        return await context.AppUsers.Include(au=>au.Employees).ThenInclude(e=>e.Pin).FirstOrDefaultAsync(au=> au.UserName == userName);
+        return await context.AppUsers.Include(au => au.EmployeeLinks).FirstOrDefaultAsync(au => au.UserName == userName);
     }
 
     public async Task<bool> UserExists(string userName)
     {
-        return await context.AppUsers.AnyAsync(au=>au.UserName == userName);
+        return await context.AppUsers.AnyAsync(au => au.UserName == userName);
     }
 
     public async Task<AppUser?> GetAppUserByIdAsync(int id)
     {
-        return await context.AppUsers.Include(u=>u.Refreshtokens).Include(u=>u.Employees).ThenInclude(e=>e.Pin).FirstOrDefaultAsync(u=>u.Id == id);
+        return await context.AppUsers.Include(u => u.Refreshtokens).Include(u => u.EmployeeLinks).FirstOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task<Refreshtoken?> GetRefreshtokenByAccountIdAndSessionInfoAsync(int accountId, SessionInfo session)
     {
-        return context.Refreshtokens.Include(t=>t.AppUser).FirstOrDefault(t=>t.AppUserId == accountId && t.Device.DeviceInfo == session.DeviceInfo && t.Device.IpAddress == session.IpAddress && t.ValidUntil > DateTime.UtcNow);
+        return await context.Refreshtokens.Include(t => t.AppUser).ThenInclude(au => au.EmployeeLinks).FirstOrDefaultAsync(t =>
+        t.AppUserId == accountId &&
+        t.Device.DeviceInfo == session.DeviceInfo &&
+        t.Device.IpAddress == session.IpAddress &&
+        t.ValidUntil > DateTime.UtcNow);
     }
 
     public Task<Refreshtoken?> GetRefreshtokenByTokenStringAsync(string token)
     {
-        return context.Refreshtokens.Include(t=>t.AppUser).Include(t=>t.Employee).FirstOrDefaultAsync(t=>t.RefreshToken == token);
+        return context.Refreshtokens.Include(t => t.AppUser).Include(t => t.Employee).FirstOrDefaultAsync(t => t.RefreshToken == token);
     }
 
 }
@@ -1892,5 +1939,12 @@ public class EmployeeRepository(WZCNetDbContext context) : IEmployeeRepository
     {
         return await context.Employees.Include(e=>e.Pin).FirstOrDefaultAsync(e=>e.Id == id);
     }
+    public async Task<Employee?> GetEmployeeByIdWithEmploymentHistoryAsync(int id)
+{
+    return await context.Employees
+        .Include(e => e.Pin)
+        .Include(e => e.EmploymentHistories)
+        .FirstOrDefaultAsync(e => e.Id == id);
+}
 }
 

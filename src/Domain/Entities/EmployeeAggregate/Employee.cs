@@ -22,7 +22,7 @@ public class Employee : BaseEntity, IAggregateRoot
     public ICollection<EmployeeComment> CommentsAuthored { get; set; } = [];
     public ICollection<EmployeeComment> CommentsRecieved { get; set; } = [];
     public ICollection<EmployeePermission> PersonalPermissions { get; set; } = [];
-    public ICollection<AppUser> AppUsers {get;set;}=[];
+    public ICollection<AppUserEmployee> AppUserLinks { get; set; } = [];
 
     private Employee() { }
     public static Result<Employee> Create(string firstName, string lastName, DateOnly dateOfBirth, string pin, IEnumerable<EmployeeAddress> addresses)
@@ -66,6 +66,14 @@ public class Employee : BaseEntity, IAggregateRoot
     public string GetName()
     {
         return $"{FirstName} {LastName}";
+    }
+
+    public bool IsCurrentlyEmployed(DateTime now)
+    {
+        return EmploymentHistories.Any(history=>
+        history.Start <= now &&
+        (history.End is null || history.End > now)
+        );
     }
     
     //TODO Add methods to manage contacts

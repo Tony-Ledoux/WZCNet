@@ -13,4 +13,11 @@ public class EmployeeRepository(WZCNetDbContext context) : IEmployeeRepository
     {
         return await context.Employees.Include(e=>e.Pin).FirstOrDefaultAsync(e=>e.Id == id);
     }
+    public async Task<Employee?> GetEmployeeByIdWithEmploymentHistoryAsync(int id)
+{
+    return await context.Employees
+        .Include(e => e.Pin)
+        .Include(e => e.EmploymentHistories)
+        .FirstOrDefaultAsync(e => e.Id == id);
+}
 }

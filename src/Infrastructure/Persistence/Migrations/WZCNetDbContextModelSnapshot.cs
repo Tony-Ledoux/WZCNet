@@ -75,7 +75,7 @@ namespace WZCNet.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AppUsersId")
+                    b.Property<int>("AppUserId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
@@ -84,7 +84,7 @@ namespace WZCNet.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("EmployeeId")
+                    b.Property<int>("EmployeeRawId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -92,9 +92,10 @@ namespace WZCNet.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AppUsersId");
+                    b.HasIndex("EmployeeRawId");
 
-                    b.HasIndex("EmployeeId");
+                    b.HasIndex("AppUserId", "EmployeeRawId")
+                        .IsUnique();
 
                     b.ToTable("AppUserEmployee");
                 });
@@ -709,14 +710,14 @@ namespace WZCNet.Migrations
             modelBuilder.Entity("WZCNet.src.Domain.Entities.AppUserEmployee", b =>
                 {
                     b.HasOne("WZCNet.src.Domain.Entities.AppUser", "AppUser")
-                        .WithMany()
-                        .HasForeignKey("AppUsersId")
+                        .WithMany("EmployeeLinks")
+                        .HasForeignKey("AppUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("WZCNet.src.Domain.Entities.EmployeeAggregate.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
+                        .WithMany("AppUserLinks")
+                        .HasForeignKey("EmployeeRawId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -783,7 +784,7 @@ namespace WZCNet.Migrations
 
                             b1.HasIndex("EmployeeId");
 
-                            b1.ToTable("EmployeeContacts");
+                            b1.ToTable("EmployeeContact");
 
                             b1.HasOne("WZCNet.src.Domain.Entities.ContactType", "ContactType")
                                 .WithMany()
@@ -1021,12 +1022,16 @@ namespace WZCNet.Migrations
 
             modelBuilder.Entity("WZCNet.src.Domain.Entities.AppUser", b =>
                 {
+                    b.Navigation("EmployeeLinks");
+
                     b.Navigation("Refreshtokens");
                 });
 
             modelBuilder.Entity("WZCNet.src.Domain.Entities.EmployeeAggregate.Employee", b =>
                 {
                     b.Navigation("Addresses");
+
+                    b.Navigation("AppUserLinks");
 
                     b.Navigation("CommentsAuthored");
 

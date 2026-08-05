@@ -1,10 +1,8 @@
-using System.Security.Cryptography;
-using Microsoft.AspNetCore.SignalR;
-using Npgsql.Replication;
 using WZCNet.src.Domain.Common;
 using WZCNet.src.Domain.Entities.EmployeeAggregate;
 using WZCNet.src.Domain.Interfaces;
 using WZCNet.src.Domain.ValueObjects;
+
 
 namespace WZCNet.src.Domain.Entities;
 
@@ -18,7 +16,8 @@ public class AppUser : BaseEntity, IAggregateRoot
     public DateTime? LastLogin { get; set; }
     public DateTime? PasswordLastChangedAt { get; set; }
     public ICollection<Refreshtoken> Refreshtokens { get; set; } = [];
-    public ICollection<Employee> Employees { get; set; } = [];
+    private readonly List<AppUserEmployee> _employeeLinks=[];
+    public IReadOnlyCollection<AppUserEmployee> EmployeeLinks => _employeeLinks.AsReadOnly();
 
     private AppUser() { }
     public static Result<AppUser> Create(string userName, string passwordHash, bool IsPersonalAccount = false)
@@ -57,29 +56,26 @@ public class AppUser : BaseEntity, IAggregateRoot
         NumberOfFailedLoginAttempts = 0;
     }
 
-    public Result<AppUser> AddEmployee(Employee employee)
+    public Result<AppUser> AddEmployee(EmployeeId employeeId)
     {
-        ArgumentNullException.ThrowIfNull(employee);
-
-        if(IsPersonalAccount && Employees.Count == 1) return Result<AppUser>.Failure("A personal account can hold only one employee");
-        if(Employees.Any(e=>e.Id == employee.Id)) return Result<AppUser>.Failure("This employee is already registered with this account");
-        Employees.Add(employee);
+        if(IsPersonalAccount && _employeeLinks.Count >= 1) return Result<AppUser>.Failure("A personal account can hold only one employee");
+        if(_employeeLinks.Any(link=>link.EmployeeRawId == employeeId.Value)) return Result<AppUser>.Failure("This employee is already registered with this account");
+        _employeeLinks.Add(AppUserEmployee.Create(employeeId));
         return Result<AppUser>.Success(this);
     }
 
-    public Result<AppUser> RemoveEmployee(Employee employee)
+    public Result<AppUser> RemoveEmployee(EmployeeId employeeId)
     {
-        ArgumentNullException.ThrowIfNull(employee);
-        var linked_Employee = Employees.FirstOrDefault(e=>e.Id == employee.Id);
-        if(linked_Employee == null) return Result<AppUser>.Failure("This employee is not registered with this account");
-        Employees.Remove(linked_Employee);
+        var link = _employeeLinks.FirstOrDefault(link => link.EmployeeRawId == employeeId.Value);
+        if(link is null) return Result<AppUser>.Failure("This employee is not registered with this account");
+        _employeeLinks.Remove(link);
         return Result<AppUser>.Success(this);
     }
 
-    public int? GetSingleEmployeeId()
+    public EmployeeId? GetSingleEmployeeId()
 {
-    if (IsPersonalAccount && Employees.Count == 1)
-        return Employees.First().Id;
+    if (IsPersonalAccount && _employeeLinks.Count == 1)
+        return _employeeLinks[0].EmployeeId;
     return null;
 }
 
