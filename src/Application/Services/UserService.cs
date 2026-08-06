@@ -168,7 +168,7 @@ public class UserService(
         if(user == null) return Result<AppUser>.Failure("Geen gebruiker gevonden");
         var employee = await employeeRepo.GetEmployeeByIdAsync(employeeId);
         if(employee == null) return Result<AppUser>.Failure("Geen Werknemer gevonden");
-        if(!employee.IsCurrentlyEmployed(DateTime.UtcNow)) return Result<AppUser>.Failure("Deze werknemer is niet langer in dienst");
+        if(!employee.IsEmployedOrWillBeEmployed(DateTime.UtcNow)) return Result<AppUser>.Failure("Deze werknemer is niet langer in dienst");
         var result = user.AddEmployee(new EmployeeId(employee.Id));
         if (!result.IsSuccess) return Result<AppUser>.Failure(result.Error);
         await dbActions.SaveChangesAsync();

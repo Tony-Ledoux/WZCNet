@@ -10,6 +10,7 @@ using WZCNet.src.Api.Extensions;
 using WZCNet.src.Infrastructure.http;
 using WZCNet.src.Application.Interfaces;
 using WZCNet.src.Infrastructure.Middleware;
+using WZCNet.src.Infrastructure.Persistence.Seeders;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,6 +33,11 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 
 var app = builder.Build();
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<IDatabaseSeeder>();
+    await seeder.SeedAsync();
+}
 app.UseMiddleware<RequestContextMiddleware>();
 // Configure the HTTP request pipeline.
 app.UseAuthentication();

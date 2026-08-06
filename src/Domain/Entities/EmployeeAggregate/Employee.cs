@@ -75,6 +75,14 @@ public class Employee : BaseEntity, IAggregateRoot
         (history.End is null || history.End > now)
         );
     }
+
+    public bool IsEmployedOrWillBeEmployed(DateTime now)
+    {
+        if(EmploymentHistories.Count == 0) return true;
+        return EmploymentHistories.Any(history =>
+        history.End is null || history.End > now
+    );
+    }
     
     //TODO Add methods to manage contacts
 
